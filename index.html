@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>末日逃亡：丧尸绝境 3D (移动端触屏版)</title>
+  <title>末日逃亡：丧尸绝境 3D (超平缓新手友好版)</title>
   <style>
     * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     html, body {
       margin: 0; padding: 0; width: 100%; height: 100%;
       overflow: hidden; background: #020305;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      touch-action: none; /* 彻底阻止浏览器默认滑动回弹与下拉刷新 */
+      touch-action: none;
     }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
 
@@ -20,7 +20,6 @@
       z-index: 5;
     }
 
-    /* 顶部 HUD 响应式布局 */
     #hud {
       position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 14px;
       display: flex; gap: 8px; z-index: 10;
@@ -56,7 +55,6 @@
     }
     #controls-hint b { color: #00ffcc; }
 
-    /* 结算弹窗适配移动端屏幕 */
     #gameover {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff; text-align: center;
@@ -90,7 +88,6 @@
       color: #fff; background: #33394d; border: none; border-radius: 8px; cursor: pointer;
     }
 
-    /* 排行榜弹窗移动端适配 */
     #leaderboard-modal {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff;
@@ -233,7 +230,7 @@
       document.getElementById('leaderboard-modal').style.display = 'none';
     }
 
-    // ----------------- 1. 音效引擎 (含移动端手势解锁) -----------------
+    // ----------------- 1. 音效引擎 -----------------
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
     function initAudio() {
@@ -349,7 +346,6 @@
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // 移动端锁定 DPR 为 1.5 ~ 2 之间，保障流畅 60 帧
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -373,12 +369,12 @@
     const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
     scene.add(sparkSystem);
 
-    // ----------------- 4. 角色与模型装配 -----------------
+    // ----------------- 4. 【超平缓】难度与梯度配置 -----------------
     const DIFFICULTY = {
-      baseSpeed: 0.28,
-      maxSpeed: 0.65,
-      laserUnlockDist: 200,
-      turnUnlockDist: 350
+      baseSpeed: 0.20,        // 极低起步速度，极度温和
+      maxSpeed: 0.50,         // 上限大幅降低（原 0.65）
+      laserUnlockDist: 400,   // 400m 之后才开始出现激光梁（原 200m）
+      turnUnlockDist: 800     // 800m 之后才开始出现转弯（原 350m）
     };
 
     let distance = 0;
@@ -505,7 +501,8 @@
       const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.25, 10), barrelMat);
       b1.position.set(0, 0.62, 0); b1.castShadow = true;
       group.add(b1);
-      if (distance > 300 && Math.random() > 0.5) {
+      // 只有在距离超过 600m 时才可能出现双桶
+      if (distance > 600 && Math.random() > 0.6) {
         const b2 = b1.clone();
         b2.position.set(0.45, 0.62, 0.3); b2.rotation.z = 0.25;
         group.add(b2);
@@ -587,21 +584,29 @@
       scene.add(group);
       tracks.push(group);
 
+      // --- 平滑障碍物密度生成（大幅降低前期密度）---
       if (zPos < -30 && !isTurn) {
         const rand = Math.random();
         if (distance < DIFFICULTY.laserUnlockDist) {
-          if (rand < 0.45) createBarrelCluster(Math.floor(Math.random() * 3), zPos);
+          // 0~400m：仅 25% 几率生成单个易躲避油桶
+          if (rand < 0.25) {
+            createBarrelCluster(Math.floor(Math.random() * 3), zPos);
+          }
           createSerumItem(LANES[Math.floor(Math.random() * 3)], zPos + 3);
         } else if (distance < DIFFICULTY.turnUnlockDist) {
-          if (rand < 0.28) createHighLaserBeam(zPos);
-          else if (rand < 0.7) {
+          // 400~800m：极低几率引入激光
+          if (rand < 0.15) {
+            createHighLaserBeam(zPos);
+          } else if (rand < 0.45) {
             const l = Math.floor(Math.random() * 3);
             createBarrelCluster(l, zPos);
             createSerumItem(LANES[(l + 1) % 3], zPos + 3);
           }
         } else {
-          if (rand < 0.38) createHighLaserBeam(zPos);
-          else if (rand < 0.8) {
+          // 800m+ 后期阶段：适中难度组合
+          if (rand < 0.25) {
+            createHighLaserBeam(zPos);
+          } else if (rand < 0.65) {
             const l = Math.floor(Math.random() * 3);
             createBarrelCluster(l, zPos);
             createSerumItem(LANES[(l + 1) % 3], zPos + 3);
@@ -614,7 +619,7 @@
 
     for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
 
-    // ----------------- 6. 移动端触摸手势与键盘双重绑定 -----------------
+    // ----------------- 6. 交互响应（扩大判定窗口与延长滑行） -----------------
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
@@ -627,7 +632,7 @@
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
-      e.preventDefault(); // 彻底阻止手机浏览器默认滚动
+      e.preventDefault();
     }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
@@ -639,14 +644,11 @@
       const absX = Math.abs(deltaX);
       const absY = Math.abs(deltaY);
 
-      // 快速滑动判定 (最小有效滑动阈值 25px)
-      if (Math.max(absX, absY) > 25 && deltaTime < 400) {
+      if (Math.max(absX, absY) > 20 && deltaTime < 450) {
         if (absX > absY) {
-          // 水平滑动：左滑 / 右滑
           if (deltaX < 0) handleInput('left');
           else handleInput('right');
         } else {
-          // 垂直滑动：上滑跳跃 / 下滑滑行
           if (deltaY < 0) handleInput('up');
           else handleInput('down');
         }
@@ -663,9 +665,9 @@
       else if (key === 'arrowdown' || key === 's') handleInput('down');
     });
 
-    // 统一输入调度器
     function handleInput(action) {
-      const nearTurnTrack = tracks.find(t => t.userData.isTurnTrack && Math.abs(t.position.z) < 6.0 && !t.userData.handled);
+      // 判定范围扩大至 ±8.0米，轻松判定成功
+      const nearTurnTrack = tracks.find(t => t.userData.isTurnTrack && Math.abs(t.position.z) < 8.0 && !t.userData.handled);
 
       if (action === 'left') {
         if (nearTurnTrack) {
@@ -680,7 +682,7 @@
       } else if (action === 'up' && !isJumping && !isSliding) {
         isJumping = true; jumpVelocity = 0.34; playSfx('jump');
       } else if (action === 'down' && !isSliding) {
-        isJumping = false; playerGroup.position.y = 0; isSliding = true; slideTimer = 42; playSfx('slide');
+        isJumping = false; playerGroup.position.y = 0; isSliding = true; slideTimer = 55; playSfx('slide');
       }
     }
 
@@ -737,8 +739,9 @@
         return;
       }
 
-      animClock += 0.22;
-      speed = Math.min(DIFFICULTY.maxSpeed, DIFFICULTY.baseSpeed + (distance / 4500));
+      animClock += 0.18; // 动画速率稍微调缓
+      // 速度增长极其平缓
+      speed = Math.min(DIFFICULTY.maxSpeed, DIFFICULTY.baseSpeed + (distance / 12000));
 
       if (turnTransition.active) {
         turnTransition.progress += 1 / turnTransition.duration;
@@ -816,8 +819,9 @@
         }
       }
 
-      const zombieDist = Math.max(4.0, 5.0 - (distance / 1000));
-      zombieGroup.position.x += (playerGroup.position.x - zombieGroup.position.x) * 0.16;
+      // 丧尸保持舒适的跟随安全距离（6.0m）
+      const zombieDist = Math.max(5.0, 6.5 - (distance / 2000));
+      zombieGroup.position.x += (playerGroup.position.x - zombieGroup.position.x) * 0.14;
       zombieGroup.position.z = playerGroup.position.z + zombieDist;
       zombieGroup.position.y = Math.sin(animClock * 1.5) * 0.15;
       zLeftArm.rotation.x = -1.3 + Math.sin(animClock * 1.3) * 0.45;
@@ -841,7 +845,7 @@
       const upcomingTurn = tracks.find(t => t.userData.isTurnTrack && !t.userData.handled);
       const alertElem = document.getElementById('turn-alert');
 
-      if (upcomingTurn && upcomingTurn.position.z < 0 && upcomingTurn.position.z > -28) {
+      if (upcomingTurn && upcomingTurn.position.z < 0 && upcomingTurn.position.z > -32) {
         alertElem.style.display = 'block';
         alertElem.innerText = upcomingTurn.userData.turnDir === -1 ? '◀ 准备向左滑过弯' : '准备向右滑过弯 ▶';
       } else {
@@ -853,12 +857,13 @@
         const lastTrackZ = tracks[tracks.length - 1].position.z;
         scene.remove(firstTrack);
 
-        const canSpawnTurn = distance > DIFFICULTY.turnUnlockDist && distanceSinceLastTurn > 220;
+        // 800m 之后，且距上次转弯超过 350m 才生成新转弯
+        const canSpawnTurn = distance > DIFFICULTY.turnUnlockDist && distanceSinceLastTurn > 350;
         const spawnTurn = canSpawnTurn && Math.random() < 0.35;
         createTrackPiece(lastTrackZ - TRACK_PIECE_LENGTH, spawnTurn);
       }
 
-      const passedTurnTrack = tracks.find(t => t.userData.isTurnTrack && t.position.z > 6.0 && !t.userData.handled);
+      const passedTurnTrack = tracks.find(t => t.userData.isTurnTrack && t.position.z > 8.0 && !t.userData.handled);
       if (passedTurnTrack) {
         triggerTurnFail("未及时拐弯，坠入深渊！");
         return;
@@ -868,7 +873,7 @@
       for (let i = serums.length - 1; i >= 0; i--) {
         const s = serums[i];
         if (s.position.z > 15) { scene.remove(s); serums.splice(i, 1); continue; }
-        if (Math.abs(s.position.z - playerPos.z) < 1.2 && Math.abs(s.position.x - playerPos.x) < 1.0) {
+        if (Math.abs(s.position.z - playerPos.z) < 1.4 && Math.abs(s.position.x - playerPos.x) < 1.1) {
           scene.remove(s); serums.splice(i, 1);
           serumCount++;
           playSfx('coin');
@@ -876,22 +881,23 @@
         }
       }
 
+      // 障碍物碰撞检测（收窄判定箱，增加容错）
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obs = obstacles[i];
         if (obs.position.z > 15) { scene.remove(obs); obstacles.splice(i, 1); continue; }
 
         if (obs.userData.type === 'low_obs') {
           if (
-            Math.abs(obs.position.z - playerPos.z) < 1.2 &&
-            Math.abs(obs.position.x - playerPos.x) < 1.1 &&
-            playerPos.y < 0.85
+            Math.abs(obs.position.z - playerPos.z) < 0.95 &&
+            Math.abs(obs.position.x - playerPos.x) < 0.90 &&
+            playerPos.y < 0.80
           ) {
             playSfx('hit');
             triggerGameOver("被生化油桶绊倒，被丧尸撕碎！");
             return;
           }
         } else if (obs.userData.type === 'high_obs') {
-          if (Math.abs(obs.position.z - playerPos.z) < 1.2 && !isSliding) {
+          if (Math.abs(obs.position.z - playerPos.z) < 0.95 && !isSliding) {
             playSfx('hit');
             triggerGameOver("触碰高压激光切断！请下滑钻过");
             return;
@@ -918,7 +924,6 @@
       document.getElementById('gameover').style.display = 'block';
     }
 
-    // 屏幕尺寸自适应（支持手机横竖屏旋转）
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
