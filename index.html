@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>末日逃亡：丧尸绝境 3D (超平缓新手友好版)</title>
+  <title>末日突围：生化围城 3D (复活系统版)</title>
   <style>
     * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     html, body {
       margin: 0; padding: 0; width: 100%; height: 100%;
-      overflow: hidden; background: #020305;
+      overflow: hidden; background: #110814;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: none;
     }
@@ -16,60 +16,92 @@
 
     #vignette {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-      box-shadow: inset 0 0 80px rgba(0,0,0,0.85), inset 0 0 30px rgba(180, 20, 20, 0.4);
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.8), inset 0 0 40px rgba(255, 30, 0, 0.25);
       z-index: 5;
     }
 
+    /* 顶部 HUD */
     #hud {
-      position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 14px;
+      position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 16px;
       display: flex; gap: 8px; z-index: 10;
     }
     .hud-card {
-      background: rgba(10, 12, 18, 0.8); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 60, 60, 0.3); padding: 6px 12px;
-      border-radius: 8px; font-weight: 800; font-size: 14px; color: #fff;
+      background: rgba(18, 10, 24, 0.85); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 80, 80, 0.4); padding: 8px 12px;
+      border-radius: 8px; font-weight: 800; font-size: 13px; color: #fff;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); display: flex; align-items: center;
     }
     .hud-card span { color: #00ffcc; font-size: 16px; margin-left: 4px; }
+    #life-card span { color: #ff3366; font-size: 16px; }
 
-    #btn-open-rank {
-      position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 14px; z-index: 12;
+    .top-btns {
+      position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 16px;
+      display: flex; gap: 8px; z-index: 12;
+    }
+    .top-btn {
       background: rgba(255, 170, 0, 0.9); color: #000; border: none;
-      padding: 7px 14px; border-radius: 8px; font-weight: 800; font-size: 13px;
-      cursor: pointer; box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+      padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 12px;
+      cursor: pointer; box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+    }
+    #btn-music { background: rgba(0, 230, 255, 0.9); box-shadow: 0 0 12px rgba(0, 230, 255, 0.4); }
+
+    /* 里程碑奖励横幅 */
+    #milestone-banner {
+      display: none; position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, rgba(0, 230, 118, 0.95), rgba(0, 150, 80, 0.95));
+      color: #fff; padding: 12px 28px; border-radius: 30px; font-size: 17px; font-weight: 900;
+      box-shadow: 0 0 30px rgba(0, 255, 150, 0.7); z-index: 15; white-space: nowrap;
+      animation: alertBounce 0.4s infinite alternate;
     }
 
     #turn-alert {
-      display: none; position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(255, 17, 68, 0.9); color: #fff; padding: 10px 22px; border-radius: 25px;
-      font-size: 18px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 8px #000;
-      box-shadow: 0 0 25px #ff1144; z-index: 15; white-space: nowrap;
+      display: none; position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(255, 17, 68, 0.92); color: #fff; padding: 12px 26px; border-radius: 30px;
+      font-size: 18px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 10px #000;
+      box-shadow: 0 0 30px #ff1144; z-index: 15; white-space: nowrap;
       animation: alertBounce 0.4s infinite alternate;
     }
     @keyframes alertBounce { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.08); } }
 
+    /* 复活确认面板 */
+    #revive-modal {
+      display: none; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); color: #fff; text-align: center;
+      background: rgba(18, 8, 20, 0.96); backdrop-filter: blur(20px);
+      padding: 26px 30px; border-radius: 16px; border: 2px solid #00ffcc;
+      box-shadow: 0 0 50px rgba(0, 255, 204, 0.5); z-index: 25; width: 88vw; max-width: 340px;
+    }
+    #revive-modal h2 { margin: 0 0 8px 0; color: #00ffcc; font-size: 22px; }
+    #revive-btn {
+      margin-top: 15px; width: 100%; padding: 12px; font-size: 16px; font-weight: bold;
+      color: #000; background: #00ffcc; border: none; border-radius: 8px; cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+    }
+
     #controls-hint {
-      position: absolute; bottom: calc(15px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-      background: rgba(10, 12, 18, 0.85); backdrop-filter: blur(6px);
-      padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
-      color: #ddd; font-size: 12px; z-index: 10; white-space: nowrap; pointer-events: none;
+      position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+      background: rgba(18, 10, 24, 0.85); backdrop-filter: blur(8px);
+      padding: 6px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+      color: #ccc; font-size: 12px; z-index: 10; white-space: nowrap; pointer-events: none;
     }
     #controls-hint b { color: #00ffcc; }
 
+    /* 结算弹窗 */
     #gameover {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff; text-align: center;
-      background: rgba(12, 14, 20, 0.96); backdrop-filter: blur(16px);
-      padding: 24px 28px; border-radius: 16px; border: 2px solid #ff3333;
-      box-shadow: 0 0 40px rgba(255, 30, 30, 0.5); z-index: 20;
+      background: rgba(18, 8, 20, 0.96); backdrop-filter: blur(20px);
+      padding: 26px 32px; border-radius: 16px; border: 2px solid #ff3333;
+      box-shadow: 0 0 50px rgba(255, 30, 30, 0.6); z-index: 20;
       width: 88vw; max-width: 360px;
     }
-    #gameover h1 { margin: 0 0 8px 0; color: #ff3333; font-size: 24px; }
+    #gameover h1 { margin: 0 0 8px 0; color: #ff3333; font-size: 26px; }
     #gameover p { margin: 4px 0; color: #aaa; font-size: 14px; }
     #gameover span { color: #fff; font-weight: bold; }
 
     .submit-box { margin-top: 14px; display: flex; gap: 6px; justify-content: center; }
     .submit-box input {
-      background: #181a24; border: 1px solid #ff5555; color: #fff; padding: 8px 10px;
+      background: #25142a; border: 1px solid #ff5555; color: #fff; padding: 8px 10px;
       border-radius: 6px; font-size: 14px; outline: none; width: 55%; text-align: center;
     }
     .submit-box button {
@@ -80,18 +112,19 @@
     .gameover-btns { margin-top: 16px; display: flex; gap: 10px; justify-content: center; }
     .btn-restart {
       flex: 1; padding: 10px 0; font-size: 14px; font-weight: bold;
-      color: #fff; background: linear-gradient(135deg, #ff3333, #aa0000);
+      color: #fff; background: linear-gradient(135deg, #ff3333, #990000);
       border: none; border-radius: 8px; cursor: pointer;
     }
     .btn-view-rank {
       flex: 1; padding: 10px 0; font-size: 14px; font-weight: bold;
-      color: #fff; background: #33394d; border: none; border-radius: 8px; cursor: pointer;
+      color: #fff; background: #3c2445; border: none; border-radius: 8px; cursor: pointer;
     }
 
+    /* 排行榜弹窗 */
     #leaderboard-modal {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff;
-      background: rgba(14, 16, 24, 0.98); backdrop-filter: blur(18px);
+      background: rgba(18, 10, 24, 0.98); backdrop-filter: blur(20px);
       padding: 22px 20px; border-radius: 16px; border: 2px solid #ffaa00;
       box-shadow: 0 0 40px rgba(255, 170, 0, 0.4); z-index: 30;
       width: 90vw; max-width: 360px;
@@ -114,23 +147,36 @@
 <body>
   <div id="vignette"></div>
   <div id="hud">
+    <div class="hud-card" id="life-card">❤️ <span id="revive-text">1</span></div>
     <div class="hud-card">🏃 <span id="score-text">0</span> m</div>
     <div class="hud-card">💉 <span id="serum-text">0</span></div>
   </div>
-  <button id="btn-open-rank" onclick="openLeaderboard()">🏆 排行榜</button>
-  <div id="turn-alert">◀ 准备向左滑拐弯</div>
-  <div id="controls-hint">
-    <b>滑动手势</b>：左右换道/过弯 ｜ 上滑跳跃 ｜ 下滑滑行
+  <div class="top-btns">
+    <button id="btn-music" class="top-btn" onclick="toggleMusic()">🎵 音乐:开</button>
+    <button id="btn-open-rank" class="top-btn" onclick="openLeaderboard()">🏆 榜单</button>
   </div>
 
-  <!-- 结算弹窗 -->
+  <div id="milestone-banner">🎉 突破 <span id="milestone-m">1000</span>m！肾上腺素+1 ❤️</div>
+  <div id="turn-alert">◀ 准备向左拐弯</div>
+
+  <!-- 原地复活弹窗 -->
+  <div id="revive-modal">
+    <h2>💉 肾上腺素救护</h2>
+    <p>检测到致命伤！剩余复活机会: <span id="modal-revive-count">1</span></p>
+    <button id="revive-btn" onclick="useRevive()">立即复活 (3s 无敌保护)</button>
+  </div>
+
+  <div id="controls-hint">
+    <b>滑动手势 / 键盘</b>：A/D换道 ｜ W跳跃 ｜ S下滑钻过激光
+  </div>
+
   <div id="gameover">
     <h1 id="over-reason">丧尸扑杀撕碎</h1>
-    <p>逃亡距离: <span id="final-dist">0</span> m</p>
-    <p>收集血清: <span id="final-serum">0</span> 支</p>
+    <p>逃亡生存距离: <span id="final-dist">0</span> m</p>
+    <p>搜集生化血清: <span id="final-serum">0</span> 支</p>
 
     <div class="submit-box" id="submit-box">
-      <input type="text" id="player-name" placeholder="输入昵称" maxlength="6" value="幸存者">
+      <input type="text" id="player-name" placeholder="幸存者昵称" maxlength="6" value="突围者">
       <button onclick="submitScoreToCloud()">上传战绩</button>
     </div>
     <div id="submit-tip" style="font-size: 11px; color: #00ffcc; margin-top: 6px;"></div>
@@ -141,9 +187,8 @@
     </div>
   </div>
 
-  <!-- 排行榜弹窗 -->
   <div id="leaderboard-modal">
-    <h2>🏆 全球幸存者天梯榜</h2>
+    <h2>🏆 全球突围幸存者榜</h2>
     <ul class="rank-list" id="rank-list">
       <li class="rank-item"><span>加载中...</span></li>
     </ul>
@@ -158,11 +203,11 @@
     // ----------------- 0. 全球排行榜存储 -----------------
     const LOCAL_KEY = 'templerun_global_leaderboard';
     let cachedLeaderboard = [
-      { name: '生化猎手', score: 1280 },
-      { name: '疾风幽灵', score: 980 },
-      { name: '黎明使者', score: 750 },
-      { name: '末日老六', score: 540 },
-      { name: '冷酷战狂', score: 380 }
+      { name: '特战幽灵', score: 1450 },
+      { name: '曙光卫士', score: 1120 },
+      { name: '生化先锋', score: 860 },
+      { name: '废土狂徒', score: 620 },
+      { name: '黎明猎手', score: 410 }
     ];
 
     try {
@@ -203,9 +248,8 @@
         });
         tip.innerText = '✅ 上传成功！已载入天梯榜';
       } catch (e) {
-        tip.innerText = '✅ 已收录至离线排行榜';
+        tip.innerText = '✅ 已收录至本地排行榜';
       }
-
       document.getElementById('submit-box').style.display = 'none';
       renderLeaderboardUI();
     }
@@ -230,12 +274,68 @@
       document.getElementById('leaderboard-modal').style.display = 'none';
     }
 
-    // ----------------- 1. 音效引擎 -----------------
+    // ----------------- 1. Web Audio 原生末日电子合成音乐引擎 -----------------
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
+    let isMusicEnabled = true;
+    let bgmTimer = null;
+    let bgmStep = 0;
+    const BASS_NOTES = [41.2, 41.2, 49.0, 41.2, 43.65, 41.2, 55.0, 49.0];
+
     function initAudio() {
-      if (!audioCtx) audioCtx = new AudioCtx();
+      if (!audioCtx) {
+        audioCtx = new AudioCtx();
+        startBGM();
+      }
       if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function toggleMusic() {
+      isMusicEnabled = !isMusicEnabled;
+      document.getElementById('btn-music').innerText = isMusicEnabled ? '🎵 音乐:开' : '🔇 音乐:关';
+      if (!isMusicEnabled && audioCtx) {
+        if (bgmTimer) clearInterval(bgmTimer);
+      } else if (isMusicEnabled) {
+        initAudio();
+        startBGM();
+      }
+    }
+
+    function startBGM() {
+      if (bgmTimer) clearInterval(bgmTimer);
+      bgmTimer = setInterval(() => {
+        if (!isMusicEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (bgmStep % 2 === 0) {
+          const kickOsc = audioCtx.createOscillator();
+          const kickGain = audioCtx.createGain();
+          kickOsc.connect(kickGain); kickGain.connect(audioCtx.destination);
+          kickOsc.frequency.setValueAtTime(110, now);
+          kickOsc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+          kickGain.gain.setValueAtTime(0.35, now);
+          kickGain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          kickOsc.start(now); kickOsc.stop(now + 0.12);
+        }
+
+        const noteFreq = BASS_NOTES[bgmStep % BASS_NOTES.length];
+        const bassOsc = audioCtx.createOscillator();
+        const bassGain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass'; filter.frequency.setValueAtTime(450, now);
+        filter.frequency.exponentialRampToValueAtTime(120, now + 0.18);
+
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(noteFreq * 2, now);
+        bassOsc.connect(filter); filter.connect(bassGain);
+        bassGain.connect(audioCtx.destination);
+
+        bassGain.gain.setValueAtTime(0.12, now);
+        bassGain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+        bassOsc.start(now); bassOsc.stop(now + 0.18);
+
+        bgmStep++;
+      }, 150);
     }
 
     function playSfx(type) {
@@ -246,10 +346,10 @@
       osc.connect(gain); gain.connect(audioCtx.destination);
 
       if (type === 'jump') {
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
-        osc.start(now); osc.stop(now + 0.15);
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.14);
+        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+        osc.start(now); osc.stop(now + 0.14);
       } else if (type === 'slide') {
         const bufferSize = audioCtx.sampleRate * 0.22;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -258,17 +358,34 @@
         const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
         const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 600;
         noise.connect(filter); filter.connect(gain);
-        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
         noise.start(now);
       } else if (type === 'coin') {
         osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
         osc.frequency.setValueAtTime(1320, now + 0.08);
-        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        gain.gain.setValueAtTime(0.18, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
         osc.start(now); osc.stop(now + 0.25);
+      } else if (type === 'revive_reward') {
+        // 获得复活币的清脆和弦音
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        osc.frequency.setValueAtTime(783.99, now + 0.2);
+        osc.frequency.setValueAtTime(1046.50, now + 0.3);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+        osc.start(now); osc.stop(now + 0.45);
+      } else if (type === 'revive_use') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.35);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now); osc.stop(now + 0.35);
       } else if (type === 'drift') {
         osc.type = 'sawtooth'; osc.frequency.setValueAtTime(320, now);
         osc.frequency.linearRampToValueAtTime(160, now + 0.3);
-        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
         osc.start(now); osc.stop(now + 0.3);
       } else if (type === 'hit') {
         osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now);
@@ -278,7 +395,48 @@
       }
     }
 
-    // ----------------- 2. 程序化贴图 -----------------
+    // ----------------- 2. 程序化高精贴图 -----------------
+    function createBuildingTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 256; cvs.height = 512;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#1e1424'; ctx.fillRect(0, 0, 256, 512);
+      for (let y = 20; y < 500; y += 30) {
+        for (let x = 20; x < 240; x += 35) {
+          if (Math.random() > 0.65) {
+            ctx.fillStyle = Math.random() > 0.4 ? '#ff9900' : '#00e5ff';
+            ctx.fillRect(x, y, 20, 18);
+          } else {
+            ctx.fillStyle = '#0f0812';
+            ctx.fillRect(x, y, 20, 18);
+          }
+        }
+      }
+      return new THREE.CanvasTexture(cvs);
+    }
+
+    function createRoadTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 512; cvs.height = 1024;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#221e28'; ctx.fillRect(0, 0, 512, 1024);
+      for (let i = 0; i < 5000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#2c2734' : '#19151e';
+        ctx.fillRect(Math.random() * 512, Math.random() * 1024, 2, 2);
+      }
+      ctx.fillStyle = '#ff3300';
+      for (let y = 0; y < 1024; y += 64) {
+        ctx.fillRect(0, y, 28, 32); ctx.fillRect(512 - 28, y, 28, 32);
+      }
+      ctx.fillStyle = '#00f5d4';
+      for (let y = 30; y < 1024; y += 128) {
+        ctx.fillRect(170 - 4, y, 8, 64); ctx.fillRect(342 - 4, y, 8, 64);
+      }
+      const tex = new THREE.CanvasTexture(cvs);
+      tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
     function createArrowTexture(isLeft = true) {
       const cvs = document.createElement('canvas');
       cvs.width = 256; cvs.height = 256;
@@ -303,29 +461,11 @@
       return new THREE.CanvasTexture(cvs);
     }
 
-    function createRoadTexture() {
-      const cvs = document.createElement('canvas');
-      cvs.width = 256; cvs.height = 512;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#181a1f'; ctx.fillRect(0, 0, 256, 512);
-      ctx.fillStyle = '#e67e22';
-      for (let y = 0; y < 512; y += 48) {
-        ctx.fillRect(0, y, 20, 24); ctx.fillRect(256 - 20, y, 20, 24);
-      }
-      ctx.fillStyle = '#d4ac0d';
-      for (let y = 20; y < 512; y += 96) {
-        ctx.fillRect(85 - 3, y, 6, 48); ctx.fillRect(171 - 3, y, 6, 48);
-      }
-      const tex = new THREE.CanvasTexture(cvs);
-      tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-      return tex;
-    }
-
-    function createHazardStripeTexture() {
+    function createHazardTexture() {
       const cvs = document.createElement('canvas');
       cvs.width = 128; cvs.height = 32;
       const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 0, 128, 32);
+      ctx.fillStyle = '#ffaa00'; ctx.fillRect(0, 0, 128, 32);
       ctx.fillStyle = '#111';
       for (let x = -32; x < 128 + 32; x += 16) {
         ctx.beginPath();
@@ -340,8 +480,8 @@
 
     // ----------------- 3. 场景与全局光影 -----------------
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0c10);
-    scene.fog = new THREE.FogExp2(0x0e1117, 0.015);
+    scene.background = new THREE.Color(0x1a0d20);
+    scene.fog = new THREE.FogExp2(0x24122d, 0.012);
 
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -349,16 +489,22 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0x404858, 0.65);
+    const ambientLight = new THREE.AmbientLight(0x4a2845, 0.7);
     scene.add(ambientLight);
 
-    const moonLight = new THREE.DirectionalLight(0xa6c8ff, 0.9);
-    moonLight.position.set(25, 45, 15);
-    moonLight.castShadow = true;
-    moonLight.shadow.mapSize.set(1024, 1024);
-    scene.add(moonLight);
+    const sunLight = new THREE.DirectionalLight(0xff6633, 1.1);
+    sunLight.position.set(30, 50, -20);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(1024, 1024);
+    scene.add(sunLight);
+
+    const coldRimLight = new THREE.DirectionalLight(0x00d0ff, 0.5);
+    coldRimLight.position.set(-20, 20, 20);
+    scene.add(coldRimLight);
 
     const sparkCount = 30;
     const sparkGeo = new THREE.BufferGeometry();
@@ -369,16 +515,21 @@
     const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
     scene.add(sparkSystem);
 
-    // ----------------- 4. 【超平缓】难度与梯度配置 -----------------
+    // ----------------- 4. 难度与复活机制配置 -----------------
     const DIFFICULTY = {
-      baseSpeed: 0.20,        // 极低起步速度，极度温和
-      maxSpeed: 0.50,         // 上限大幅降低（原 0.65）
-      laserUnlockDist: 400,   // 400m 之后才开始出现激光梁（原 200m）
-      turnUnlockDist: 800     // 800m 之后才开始出现转弯（原 350m）
+      baseSpeed: 0.20,
+      maxSpeed: 0.50,
+      laserUnlockDist: 400,
+      turnUnlockDist: 800
     };
 
     let distance = 0;
     let speed = DIFFICULTY.baseSpeed;
+    let reviveCount = 1; // 初始自带 1 次复活
+    let nextMilestone = 1000; // 每1000米增加一次
+    let isInvincible = false; // 复活无敌保护中
+    let invincibleTimer = 0;
+    let isWaitingRevive = false;
 
     const LANES = [-2.4, 0, 2.4];
     let currentLane = 1;
@@ -389,82 +540,110 @@
     let jumpVelocity = 0;
     const gravity = -0.016;
 
+    // --- 角色模型装配 ---
     const playerGroup = new THREE.Group();
-    const matTacticalArmor = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.4 });
-    const matJacket = new THREE.MeshStandardMaterial({ color: 0x3d5a80, roughness: 0.7 });
-    const matSkin = new THREE.MeshStandardMaterial({ color: 0xd4a373 });
-    const matBoots = new THREE.MeshStandardMaterial({ color: 0x111113 });
-    const matVisor = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const matArmor = new THREE.MeshStandardMaterial({ color: 0x1f232a, roughness: 0.4, metalness: 0.5 });
+    const matSuit = new THREE.MeshStandardMaterial({ color: 0x334d5c, roughness: 0.7 });
+    const matGloves = new THREE.MeshStandardMaterial({ color: 0x111215, roughness: 0.3 });
+    const matVisorGlow = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+    const matStrap = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.5 });
 
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.9, 8), matJacket);
-    torso.position.y = 1.15; torso.castShadow = true;
-    const armorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.45), matTacticalArmor);
-    torso.add(armorPlate);
-    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
+    const pTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.28, 0.95, 8), matSuit);
+    pTorso.position.y = 1.15; pTorso.castShadow = true;
+
+    const vestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.65, 0.46), matArmor);
+    pTorso.add(vestPlate);
+
+    const chestStrap = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.48), matStrap);
+    chestStrap.position.set(0, 0.1, 0.01); chestStrap.rotation.z = 0.4;
+    pTorso.add(chestStrap);
+
+    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.6, 0.28), matArmor);
     backpack.position.set(0, 0.05, -0.32);
-    torso.add(backpack);
+    const oxygenTank = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xdfe6e9, metalness: 0.8 }));
+    oxygenTank.position.set(0.16, 0, -0.16);
+    backpack.add(oxygenTank);
+    pTorso.add(backpack);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), matSkin);
-    head.position.set(0, 0.68, 0); head.castShadow = true;
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.15), matVisor);
+    const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 14), matArmor);
+    pHead.position.set(0, 0.68, 0); pHead.castShadow = true;
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.16), matVisorGlow);
     visor.position.set(0, 0.02, 0.18);
-    head.add(visor);
-    torso.add(head);
+    pHead.add(visor);
+    const rebreather = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.15, 8), matGloves);
+    rebreather.rotation.x = Math.PI / 2; rebreather.position.set(0, -0.12, 0.2);
+    pHead.add(rebreather);
+    pTorso.add(pHead);
 
-    const flashlight = new THREE.SpotLight(0xe0f7fa, 3.0, 30, Math.PI / 6, 0.4, 1);
-    flashlight.position.set(0, 0.2, 0.3);
+    const chestSpotlight = new THREE.SpotLight(0xe0f7fa, 3.8, 40, Math.PI / 6, 0.35, 1);
+    chestSpotlight.position.set(0, 0.2, 0.35);
     const flashTarget = new THREE.Object3D();
-    flashTarget.position.set(0, 0, -15);
+    flashTarget.position.set(0, 0, -18);
     playerGroup.add(flashTarget);
-    flashlight.target = flashTarget;
-    torso.add(flashlight);
+    chestSpotlight.target = flashTarget;
+    pTorso.add(chestSpotlight);
 
-    function createLimb(upperGeo, lowerGeo, matUpper, matLower) {
+    // 复活无敌防护盾网格
+    const reviveShield = new THREE.Mesh(
+      new THREE.SphereGeometry(1.4, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0 })
+    );
+    reviveShield.position.y = 1.0;
+    playerGroup.add(reviveShield);
+
+    function createTacticalLimb(uR, lR, len, matU, matL) {
       const joint = new THREE.Group();
-      const upper = new THREE.Mesh(upperGeo, matUpper);
-      upper.position.y = -0.22; upper.castShadow = true;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(uR, uR * 0.9, len, 8), matU);
+      upper.position.y = -len / 2; upper.castShadow = true;
       joint.add(upper);
-      const lower = new THREE.Mesh(lowerGeo, matLower);
-      lower.position.y = -0.55; lower.castShadow = true;
+
+      const kneePad = new THREE.Mesh(new THREE.BoxGeometry(uR * 2.2, uR * 1.5, uR * 1.8), matArmor);
+      kneePad.position.set(0, -len, 0.05);
+      joint.add(kneePad);
+
+      const lower = new THREE.Mesh(new THREE.CylinderGeometry(uR * 0.85, lR, len, 8), matL);
+      lower.position.y = -len * 1.45; lower.castShadow = true;
       joint.add(lower);
       return joint;
     }
 
-    const armGeoU = new THREE.CylinderGeometry(0.1, 0.09, 0.35, 6);
-    const armGeoL = new THREE.CylinderGeometry(0.08, 0.07, 0.35, 6);
-    const leftArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
-    leftArm.position.set(-0.45, 1.45, 0);
-    const rightArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
-    rightArm.position.set(0.45, 1.45, 0);
+    const leftArm = createTacticalLimb(0.09, 0.07, 0.35, matSuit, matGloves);
+    leftArm.position.set(-0.45, 1.48, 0);
+    const rightArm = createTacticalLimb(0.09, 0.07, 0.35, matSuit, matGloves);
+    rightArm.position.set(0.45, 1.48, 0);
 
-    const legGeoU = new THREE.CylinderGeometry(0.14, 0.12, 0.4, 6);
-    const legGeoL = new THREE.CylinderGeometry(0.12, 0.1, 0.4, 6);
-    const leftLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
-    leftLeg.position.set(-0.2, 0.7, 0);
-    const rightLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
-    rightLeg.position.set(0.2, 0.7, 0);
+    const leftLeg = createTacticalLimb(0.13, 0.1, 0.42, matSuit, matArmor);
+    leftLeg.position.set(-0.2, 0.72, 0);
+    const rightLeg = createTacticalLimb(0.13, 0.1, 0.42, matSuit, matArmor);
+    rightLeg.position.set(0.2, 0.72, 0);
 
-    playerGroup.add(torso, leftArm, rightArm, leftLeg, rightLeg);
+    playerGroup.add(pTorso, leftArm, rightArm, leftLeg, rightLeg);
     scene.add(playerGroup);
 
-    // 变异丧尸
+    // --- 变异暴君丧尸 ---
     const zombieGroup = new THREE.Group();
-    const matZombieSkin = new THREE.MeshStandardMaterial({ color: 0x3d5a38, roughness: 0.9 });
-    const matZombieGlow = new THREE.MeshBasicMaterial({ color: 0xff073a });
-    const zTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 1.1, 6), matZombieSkin);
-    zTorso.position.y = 1.2; zTorso.rotation.x = 0.38; zTorso.castShadow = true;
-    const zHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 10), matZombieSkin);
-    zHead.position.set(0, 0.7, 0.2);
-    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), matZombieGlow);
-    eyeL.position.set(-0.12, 0.08, 0.28);
-    const eyeR = eyeL.clone(); eyeR.position.x = 0.12;
+    const matZombieSkin = new THREE.MeshStandardMaterial({ color: 0x3e5239, roughness: 0.85 });
+    const matZombieFlesh = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+
+    const zTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.38, 1.3, 8), matZombieSkin);
+    zTorso.position.y = 1.35; zTorso.rotation.x = 0.35; zTorso.castShadow = true;
+
+    const bioHeart = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22), matZombieFlesh);
+    bioHeart.position.set(0.18, 0.2, 0.42);
+    zTorso.add(bioHeart);
+
+    const zHead = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 12), matZombieSkin);
+    zHead.position.set(0, 0.8, 0.25);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), matZombieFlesh);
+    eyeL.position.set(-0.14, 0.08, 0.3);
+    const eyeR = eyeL.clone(); eyeR.position.x = 0.14;
     zHead.add(eyeL, eyeR);
     zTorso.add(zHead);
 
-    const zLeftArm = createLimb(armGeoU, armGeoL, matZombieSkin, matZombieSkin);
-    zLeftArm.position.set(-0.55, 1.45, 0.2); zLeftArm.rotation.x = -1.3;
-    const zRightArm = createLimb(armGeoU, armGeoL, matZombieSkin, matZombieSkin);
-    zRightArm.position.set(0.55, 1.45, 0.2); zRightArm.rotation.x = -1.3;
+    const zLeftArm = createTacticalLimb(0.18, 0.14, 0.5, matZombieSkin, matZombieSkin);
+    zLeftArm.position.set(-0.65, 1.6, 0.2); zLeftArm.rotation.x = -1.25;
+    const zRightArm = createTacticalLimb(0.14, 0.11, 0.45, matZombieSkin, matZombieSkin);
+    zRightArm.position.set(0.6, 1.6, 0.2); zRightArm.rotation.x = -1.25;
 
     zombieGroup.add(zTorso, zLeftArm, zRightArm);
     scene.add(zombieGroup);
@@ -477,15 +656,18 @@
     const serums = [];
     const turnGlowMeshes = [];
 
+    const buildingTex = createBuildingTexture();
     const roadTex = createRoadTexture();
-    const hazardTex = createHazardStripeTexture();
+    const hazardTex = createHazardTexture();
     const arrowLeftTex = createArrowTexture(true);
     const arrowRightTex = createArrowTexture(false);
 
-    const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.85 });
-    const rustMetalMat = new THREE.MeshStandardMaterial({ color: 0x3a3330, roughness: 0.9 });
+    const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.8 });
+    const bridgePierMat = new THREE.MeshStandardMaterial({ color: 0x1f1a24, roughness: 0.95 });
+    const buildingMat = new THREE.MeshStandardMaterial({ map: buildingTex, roughness: 0.85 });
+    const guardMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32, roughness: 0.9 });
     const laserMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.85 });
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0xa83232, roughness: 0.5 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0xb52b2b, roughness: 0.5 });
 
     const turnTransition = {
       active: false,
@@ -501,7 +683,6 @@
       const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.25, 10), barrelMat);
       b1.position.set(0, 0.62, 0); b1.castShadow = true;
       group.add(b1);
-      // 只有在距离超过 600m 时才可能出现双桶
       if (distance > 600 && Math.random() > 0.6) {
         const b2 = b1.clone();
         b2.position.set(0.45, 0.62, 0.3); b2.rotation.z = 0.25;
@@ -515,7 +696,7 @@
 
     function createHighLaserBeam(zPos) {
       const group = new THREE.Group();
-      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5.5, 0.6), rustMetalMat);
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5.5, 0.6), guardMat);
       p1.position.set(-3.8, 2.75, 0); p1.castShadow = true;
       const p2 = p1.clone(); p2.position.x = 3.8;
       const topBar = new THREE.Mesh(new THREE.BoxGeometry(8.2, 2.4, 0.9), new THREE.MeshStandardMaterial({ map: hazardTex }));
@@ -545,11 +726,11 @@
       let turnDir = Math.random() > 0.5 ? 1 : -1;
 
       if (isTurn) {
-        const mainRoad = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
-        mainRoad.position.set(0, -0.2, 0); group.add(mainRoad);
+        const mainRoad = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, TRACK_PIECE_LENGTH), roadMat);
+        mainRoad.position.set(0, -0.3, 0); group.add(mainRoad);
 
-        const cross = new THREE.Mesh(new THREE.BoxGeometry(26, 0.4, 8), roadMat);
-        cross.position.set(turnDir * 9, -0.2, 0); group.add(cross);
+        const cross = new THREE.Mesh(new THREE.BoxGeometry(26, 0.6, 8), roadMat);
+        cross.position.set(turnDir * 9, -0.3, 0); group.add(cross);
 
         const arrowPlaneMat = new THREE.MeshBasicMaterial({
           map: turnDir === -1 ? arrowLeftTex : arrowRightTex,
@@ -560,7 +741,7 @@
         group.add(arrowPlane);
         turnGlowMeshes.push(arrowPlane);
 
-        const signPost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 0.4), rustMetalMat);
+        const signPost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 0.4), guardMat);
         signPost.position.set(-turnDir * 4.2, 3.5, 0);
         const signBoard = new THREE.Mesh(
           new THREE.BoxGeometry(4.5, 2.5, 0.4),
@@ -569,14 +750,28 @@
         signBoard.position.set(-turnDir * 2.2, 6.0, 0);
         group.add(signPost, signBoard);
       } else {
-        const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
-        road.position.set(0, -0.2, 0); road.receiveShadow = true;
+        const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, TRACK_PIECE_LENGTH), roadMat);
+        road.position.set(0, -0.3, 0); road.receiveShadow = true;
         group.add(road);
 
-        const guardL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, TRACK_PIECE_LENGTH), rustMetalMat);
-        guardL.position.set(-4.0, 0.1, 0);
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(3.5, 20, 3.5), bridgePierMat);
+        pier.position.set(0, -10.3, 0);
+        group.add(pier);
+
+        const guardL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, TRACK_PIECE_LENGTH), guardMat);
+        guardL.position.set(-4.0, 0.15, 0);
         const guardR = guardL.clone(); guardR.position.x = 4.0;
         group.add(guardL, guardR);
+
+        const bHeightL = 25 + Math.random() * 35;
+        const bL = new THREE.Mesh(new THREE.BoxGeometry(16, bHeightL, 18), buildingMat);
+        bL.position.set(-18 - Math.random() * 4, bHeightL / 2 - 12, 0);
+        group.add(bL);
+
+        const bHeightR = 25 + Math.random() * 35;
+        const bR = new THREE.Mesh(new THREE.BoxGeometry(16, bHeightR, 18), buildingMat);
+        bR.position.set(18 + Math.random() * 4, bHeightR / 2 - 12, 0);
+        group.add(bR);
       }
 
       group.position.set(0, 0, zPos);
@@ -584,29 +779,21 @@
       scene.add(group);
       tracks.push(group);
 
-      // --- 平滑障碍物密度生成（大幅降低前期密度）---
       if (zPos < -30 && !isTurn) {
         const rand = Math.random();
         if (distance < DIFFICULTY.laserUnlockDist) {
-          // 0~400m：仅 25% 几率生成单个易躲避油桶
-          if (rand < 0.25) {
-            createBarrelCluster(Math.floor(Math.random() * 3), zPos);
-          }
+          if (rand < 0.25) createBarrelCluster(Math.floor(Math.random() * 3), zPos);
           createSerumItem(LANES[Math.floor(Math.random() * 3)], zPos + 3);
         } else if (distance < DIFFICULTY.turnUnlockDist) {
-          // 400~800m：极低几率引入激光
-          if (rand < 0.15) {
-            createHighLaserBeam(zPos);
-          } else if (rand < 0.45) {
+          if (rand < 0.15) createHighLaserBeam(zPos);
+          else if (rand < 0.45) {
             const l = Math.floor(Math.random() * 3);
             createBarrelCluster(l, zPos);
             createSerumItem(LANES[(l + 1) % 3], zPos + 3);
           }
         } else {
-          // 800m+ 后期阶段：适中难度组合
-          if (rand < 0.25) {
-            createHighLaserBeam(zPos);
-          } else if (rand < 0.65) {
+          if (rand < 0.25) createHighLaserBeam(zPos);
+          else if (rand < 0.65) {
             const l = Math.floor(Math.random() * 3);
             createBarrelCluster(l, zPos);
             createSerumItem(LANES[(l + 1) % 3], zPos + 3);
@@ -619,7 +806,7 @@
 
     for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
 
-    // ----------------- 6. 交互响应（扩大判定窗口与延长滑行） -----------------
+    // ----------------- 6. 交互响应 -----------------
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
@@ -631,12 +818,10 @@
       touchStartTime = Date.now();
     }, { passive: false });
 
-    window.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-    }, { passive: false });
+    window.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
-      if (isFalling || isGameOver || turnTransition.active) return;
+      if (isFalling || isGameOver || turnTransition.active || isWaitingRevive) return;
       const deltaX = e.changedTouches[0].screenX - touchStartX;
       const deltaY = e.changedTouches[0].screenY - touchStartY;
       const deltaTime = Date.now() - touchStartTime;
@@ -657,7 +842,7 @@
 
     window.addEventListener('keydown', (e) => {
       initAudio();
-      if (isFalling || isGameOver || turnTransition.active) return;
+      if (isFalling || isGameOver || turnTransition.active || isWaitingRevive) return;
       const key = e.key.toLowerCase();
       if (key === 'arrowleft' || key === 'a') handleInput('left');
       else if (key === 'arrowright' || key === 'd') handleInput('right');
@@ -666,7 +851,6 @@
     });
 
     function handleInput(action) {
-      // 判定范围扩大至 ±8.0米，轻松判定成功
       const nearTurnTrack = tracks.find(t => t.userData.isTurnTrack && Math.abs(t.position.z) < 8.0 && !t.userData.handled);
 
       if (action === 'left') {
@@ -719,10 +903,53 @@
       isFalling = true;
       playSfx('hit');
       document.getElementById('turn-alert').style.display = 'none';
-      triggerGameOver(reason);
+      handlePlayerDefeat(reason);
     }
 
-    // ----------------- 7. 渲染主循环 -----------------
+    // ----------------- 7. 复活与结算控制中心 -----------------
+    function handlePlayerDefeat(reason) {
+      if (reviveCount > 0) {
+        // 触发复活流程
+        isWaitingRevive = true;
+        document.getElementById('modal-revive-count').innerText = reviveCount;
+        document.getElementById('revive-modal').style.display = 'block';
+      } else {
+        triggerGameOver(reason);
+      }
+    }
+
+    function useRevive() {
+      reviveCount--;
+      document.getElementById('revive-text').innerText = reviveCount;
+      document.getElementById('revive-modal').style.display = 'none';
+      isWaitingRevive = false;
+      isFalling = false;
+
+      playSfx('revive_use');
+
+      // 重置回安全状态
+      currentLane = 1;
+      playerGroup.position.set(0, 0, 0);
+      playerGroup.rotation.set(0, 0, 0);
+      isJumping = false;
+      isSliding = false;
+      jumpVelocity = 0;
+
+      // 清除前方附近障碍物
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        if (Math.abs(obstacles[i].position.z) < 25) {
+          scene.remove(obstacles[i]);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // 开启 3 秒无敌金身保护
+      isInvincible = true;
+      invincibleTimer = 180; // 约 3 秒 (60fps)
+      reviveShield.material.opacity = 0.8;
+    }
+
+    // ----------------- 8. 游戏渲染主循环 -----------------
     let serumCount = 0;
     let isGameOver = false;
     let distanceSinceLastTurn = 0;
@@ -732,6 +959,11 @@
       if (isGameOver && !isFalling) return;
       requestAnimationFrame(animate);
 
+      if (isWaitingRevive) {
+        renderer.render(scene, camera);
+        return;
+      }
+
       if (isFalling) {
         playerGroup.position.y -= 0.35;
         playerGroup.position.z += speed;
@@ -739,10 +971,35 @@
         return;
       }
 
-      animClock += 0.18; // 动画速率稍微调缓
-      // 速度增长极其平缓
+      animClock += 0.18;
       speed = Math.min(DIFFICULTY.maxSpeed, DIFFICULTY.baseSpeed + (distance / 12000));
 
+      // 1. 每 1000m 里程碑奖励机制
+      if (distance >= nextMilestone) {
+        reviveCount++;
+        document.getElementById('revive-text').innerText = reviveCount;
+        playSfx('revive_reward');
+
+        // 显示奖励横幅
+        const banner = document.getElementById('milestone-banner');
+        document.getElementById('milestone-m').innerText = nextMilestone;
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 2500);
+
+        nextMilestone += 1000;
+      }
+
+      // 2. 无敌护盾计时
+      if (isInvincible) {
+        invincibleTimer--;
+        reviveShield.material.opacity = 0.5 + Math.sin(animClock * 2.5) * 0.3;
+        if (invincibleTimer <= 0) {
+          isInvincible = false;
+          reviveShield.material.opacity = 0;
+        }
+      }
+
+      // 3. 转弯运镜
       if (turnTransition.active) {
         turnTransition.progress += 1 / turnTransition.duration;
         const t = turnTransition.progress;
@@ -787,26 +1044,26 @@
         return;
       }
 
-      // 常规跑动
+      // 4. 常规跑动与换道
       const targetX = LANES[currentLane];
       const deltaX = targetX - playerGroup.position.x;
       playerGroup.position.x += deltaX * 0.22;
-      torso.rotation.z = -deltaX * 0.12;
-      torso.rotation.y = deltaX * 0.08;
+      pTorso.rotation.z = -deltaX * 0.12;
+      pTorso.rotation.y = deltaX * 0.08;
 
       if (!isJumping && !isSliding) {
         leftLeg.rotation.x = Math.sin(animClock) * 0.75;
         rightLeg.rotation.x = -Math.sin(animClock) * 0.75;
         leftArm.rotation.x = -Math.sin(animClock) * 0.65;
         rightArm.rotation.x = Math.sin(animClock) * 0.65;
-        torso.position.y = 1.15 + Math.abs(Math.sin(animClock)) * 0.08;
+        pTorso.position.y = 1.15 + Math.abs(Math.sin(animClock)) * 0.08;
       } else if (isSliding) {
         slideTimer--;
-        torso.rotation.x = -1.1; torso.position.y = 0.55;
+        pTorso.rotation.x = -1.1; pTorso.position.y = 0.55;
         leftLeg.rotation.x = -1.4; rightLeg.rotation.x = -1.2;
         leftArm.rotation.x = 0.8; rightArm.rotation.x = 0.8;
         if (slideTimer <= 0) {
-          isSliding = false; torso.rotation.x = 0; torso.position.y = 1.15;
+          isSliding = false; pTorso.rotation.x = 0; pTorso.position.y = 1.15;
         }
       }
 
@@ -819,13 +1076,13 @@
         }
       }
 
-      // 丧尸保持舒适的跟随安全距离（6.0m）
+      // 5. 暴君丧尸跟随
       const zombieDist = Math.max(5.0, 6.5 - (distance / 2000));
       zombieGroup.position.x += (playerGroup.position.x - zombieGroup.position.x) * 0.14;
       zombieGroup.position.z = playerGroup.position.z + zombieDist;
       zombieGroup.position.y = Math.sin(animClock * 1.5) * 0.15;
-      zLeftArm.rotation.x = -1.3 + Math.sin(animClock * 1.3) * 0.45;
-      zRightArm.rotation.x = -1.3 - Math.sin(animClock * 1.3) * 0.45;
+      zLeftArm.rotation.x = -1.25 + Math.sin(animClock * 1.3) * 0.45;
+      zRightArm.rotation.x = -1.25 - Math.sin(animClock * 1.3) * 0.45;
 
       turnGlowMeshes.forEach(mesh => {
         mesh.material.opacity = 0.6 + Math.sin(animClock * 2.0) * 0.4;
@@ -847,7 +1104,7 @@
 
       if (upcomingTurn && upcomingTurn.position.z < 0 && upcomingTurn.position.z > -32) {
         alertElem.style.display = 'block';
-        alertElem.innerText = upcomingTurn.userData.turnDir === -1 ? '◀ 准备向左滑过弯' : '准备向右滑过弯 ▶';
+        alertElem.innerText = upcomingTurn.userData.turnDir === -1 ? '◀ 准备向左拐弯' : '准备向右拐弯 ▶';
       } else {
         alertElem.style.display = 'none';
       }
@@ -857,7 +1114,6 @@
         const lastTrackZ = tracks[tracks.length - 1].position.z;
         scene.remove(firstTrack);
 
-        // 800m 之后，且距上次转弯超过 350m 才生成新转弯
         const canSpawnTurn = distance > DIFFICULTY.turnUnlockDist && distanceSinceLastTurn > 350;
         const spawnTurn = canSpawnTurn && Math.random() < 0.35;
         createTrackPiece(lastTrackZ - TRACK_PIECE_LENGTH, spawnTurn);
@@ -869,6 +1125,7 @@
         return;
       }
 
+      // 6. 血清收集
       const playerPos = playerGroup.position;
       for (let i = serums.length - 1; i >= 0; i--) {
         const s = serums[i];
@@ -881,26 +1138,28 @@
         }
       }
 
-      // 障碍物碰撞检测（收窄判定箱，增加容错）
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        if (obs.position.z > 15) { scene.remove(obs); obstacles.splice(i, 1); continue; }
+      // 7. 障碍物碰撞检测（无敌保护中免疫伤害）
+      if (!isInvincible) {
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          if (obs.position.z > 15) { scene.remove(obs); obstacles.splice(i, 1); continue; }
 
-        if (obs.userData.type === 'low_obs') {
-          if (
-            Math.abs(obs.position.z - playerPos.z) < 0.95 &&
-            Math.abs(obs.position.x - playerPos.x) < 0.90 &&
-            playerPos.y < 0.80
-          ) {
-            playSfx('hit');
-            triggerGameOver("被生化油桶绊倒，被丧尸撕碎！");
-            return;
-          }
-        } else if (obs.userData.type === 'high_obs') {
-          if (Math.abs(obs.position.z - playerPos.z) < 0.95 && !isSliding) {
-            playSfx('hit');
-            triggerGameOver("触碰高压激光切断！请下滑钻过");
-            return;
+          if (obs.userData.type === 'low_obs') {
+            if (
+              Math.abs(obs.position.z - playerPos.z) < 0.95 &&
+              Math.abs(obs.position.x - playerPos.x) < 0.90 &&
+              playerPos.y < 0.80
+            ) {
+              playSfx('hit');
+              handlePlayerDefeat("被生化油桶绊倒，被丧尸撕碎！");
+              return;
+            }
+          } else if (obs.userData.type === 'high_obs') {
+            if (Math.abs(obs.position.z - playerPos.z) < 0.95 && !isSliding) {
+              playSfx('hit');
+              handlePlayerDefeat("触碰高压激光切断！请下滑钻过");
+              return;
+            }
           }
         }
       }
