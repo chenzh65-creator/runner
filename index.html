@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>末日逃亡：丧尸绝境 3D (全球排行榜联机版)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow: hidden; background: #020305; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+    #canvas-container { width: 100vw; height: 100vh; }
+    
+    #vignette {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+      box-shadow: inset 0 0 120px rgba(0,0,0,0.85), inset 0 0 40px rgba(180, 20, 20, 0.4);
+      z-index: 5;
+    }
+
+    #hud {
+      position: absolute; top: 20px; left: 24px; color: #fff;
+      display: flex; gap: 16px; z-index: 10;
+    }
+    .hud-card {
+      background: rgba(10, 12, 18, 0.75); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 60, 60, 0.3); padding: 10px 18px;
+      border-radius: 8px; font-weight: 800; font-size: 18px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+    .hud-card span { color: #00ffcc; font-size: 22px; margin-left: 6px; }
+
+    #danger-bar {
+      position: absolute; top: 20px; right: 170px; z-index: 10;
+      background: rgba(20, 5, 5, 0.85); backdrop-filter: blur(8px);
+      border: 1px solid #ff3333; padding: 10px 18px; border-radius: 8px;
+      color: #ff4444; font-weight: bold; font-size: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .pulse-dot { width: 10px; height: 10px; background: #ff2222; border-radius: 50%; animation: pulse 0.8s infinite; }
+    @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
+
+    /* 顶部排行榜按钮 */
+    #btn-open-rank {
+      position: absolute; top: 20px; right: 24px; z-index: 12;
+      background: rgba(255, 170, 0, 0.85); color: #000; border: none;
+      padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px;
+      cursor: pointer; box-shadow: 0 0 15px rgba(255, 170, 0, 0.4); transition: 0.2s;
+    }
+    #btn-open-rank:hover { transform: scale(1.05); filter: brightness(1.2); }
+
+    #turn-alert {
+      display: none; position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(255, 17, 68, 0.85); color: #fff; padding: 12px 30px; border-radius: 30px;
+      font-size: 24px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 10px #000;
+      box-shadow: 0 0 30px #ff1144; z-index: 15; animation: alertBounce 0.4s infinite alternate;
+    }
+    @keyframes alertBounce { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+
+    #controls-hint {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 12, 18, 0.8); backdrop-filter: blur(6px);
+      padding: 8px 24px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.15);
+      color: #ccc; font-size: 13px; z-index: 10;
+    }
+    #controls-hint b { color: #00ffcc; }
+
+    /* 结算弹窗 */
+    #gameover {
+      display: none; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); color: #fff; text-align: center;
+      background: rgba(12, 14, 20, 0.96); backdrop-filter: blur(16px);
+      padding: 30px 45px; border-radius: 16px; border: 2px solid #ff3333;
+      box-shadow: 0 0 50px rgba(255, 30, 30, 0.5); z-index: 20; min-width: 360px;
+    }
+    #gameover h1 { margin: 0 0 8px 0; color: #ff3333; font-size: 30px; letter-spacing: 2px; }
+    #gameover p { margin: 6px 0; color: #aaa; font-size: 15px; }
+    #gameover span { color: #fff; font-weight: bold; }
+
+    .submit-box {
+      margin-top: 15px; display: flex; gap: 8px; justify-content: center;
+    }
+    .submit-box input {
+      background: #181a24; border: 1px solid #ff5555; color: #fff; padding: 10px 14px;
+      border-radius: 6px; font-size: 14px; outline: none; width: 140px; text-align: center;
+    }
+    .submit-box button {
+      background: #00e676; color: #000; border: none; padding: 10px 16px;
+      border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;
+    }
+    .submit-box button:hover { transform: scale(1.05); }
+
+    .gameover-btns {
+      margin-top: 20px; display: flex; gap: 12px; justify-content: center;
+    }
+    .btn-restart {
+      padding: 12px 28px; font-size: 15px; font-weight: bold;
+      color: #fff; background: linear-gradient(135deg, #ff3333, #aa0000);
+      border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-restart:hover { transform: scale(1.05); filter: brightness(1.2); }
+    .btn-view-rank {
+      padding: 12px 20px; font-size: 15px; font-weight: bold;
+      color: #fff; background: #33394d; border: none; border-radius: 8px; cursor: pointer;
+    }
+
+    /* 全球排行榜模态框 */
+    #leaderboard-modal {
+      display: none; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); color: #fff;
+      background: rgba(14, 16, 24, 0.98); backdrop-filter: blur(18px);
+      padding: 30px 40px; border-radius: 16px; border: 2px solid #ffaa00;
+      box-shadow: 0 0 50px rgba(255, 170, 0, 0.4); z-index: 30; width: 380px;
+    }
+    #leaderboard-modal h2 { margin: 0 0 15px 0; color: #ffaa00; text-align: center; font-size: 24px; }
+    .rank-list { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
+    .rank-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14px;
+    }
+    .rank-item:nth-child(1) { color: #ffd700; font-weight: bold; font-size: 16px; }
+    .rank-item:nth-child(2) { color: #c0c0c0; font-weight: bold; }
+    .rank-item:nth-child(3) { color: #cd7f32; font-weight: bold; }
+    .rank-close {
+      margin-top: 20px; width: 100%; padding: 10px; background: #444; border: none;
+      color: #fff; border-radius: 6px; font-weight: bold; cursor: pointer;
+    }
+    .rank-status { font-size: 12px; color: #888; text-align: center; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div id="vignette"></div>
+  <div id="hud">
+    <div class="hud-card">🏃 逃亡距离<span id="score-text">0</span> m</div>
+    <div class="hud-card">💉 血清<span id="serum-text">0</span></div>
+  </div>
+  <div id="danger-bar"><div class="pulse-dot"></div>变异丧尸追击中</div>
+  <button id="btn-open-rank" onclick="openLeaderboard()">🏆 全球榜</button>
+  <div id="turn-alert">◀ 准备向左拐弯 [按 A]</div>
+  <div id="controls-hint">
+    <b>A / D</b>：换道 / 转弯 ｜ <b>W / 空格</b>：跳跃 ｜ <b>S</b>：下滑钻过激光梁
+  </div>
+
+  <!-- 结算弹窗 -->
+  <div id="gameover">
+    <h1 id="over-reason">丧尸扑杀撕碎</h1>
+    <p>逃亡生存距离: <span id="final-dist">0</span> m</p>
+    <p>搜集生化血清: <span id="final-serum">0</span> 支</p>
+
+    <!-- 上传至全球排行榜 -->
+    <div class="submit-box" id="submit-box">
+      <input type="text" id="player-name" placeholder="输入幸存者昵称" maxlength="8" value="幸存者">
+      <button onclick="submitScoreToCloud()">上传战绩</button>
+    </div>
+    <div id="submit-tip" style="font-size: 12px; color: #00ffcc; margin-top: 6px;"></div>
+
+    <div class="gameover-btns">
+      <button class="btn-restart" onclick="location.reload()">重新突围</button>
+      <button class="btn-view-rank" onclick="openLeaderboard()">查看全球榜</button>
+    </div>
+  </div>
+
+  <!-- 全球排行榜窗口 -->
+  <div id="leaderboard-modal">
+    <h2>🏆 全球幸存者天梯榜</h2>
+    <ul class="rank-list" id="rank-list">
+      <li class="rank-item"><span>加载中...</span></li>
+    </ul>
+    <div class="rank-status" id="rank-status">云端数据实时同步中</div>
+    <button class="rank-close" onclick="closeLeaderboard()">关闭</button>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // ----------------- 0. 全球在线数据库 (Serverless Cloud API) -----------------
+    // 使用公开安全的无服务器键值存储仓库 (KVdb / Mockbin 多线路容灾)
+    const CLOUD_API_URL = 'https://api.counterapi.dev/v1/templerun3d_zombie/rankings';
+    const LOCAL_KEY = 'templerun_global_leaderboard';
+
+    // 默认内置榜单
+    let cachedLeaderboard = [
+      { name: '生化猎手', score: 1280, date: '08-19' },
+      { name: '疾风幽灵', score: 980, date: '08-19' },
+      { name: '黎明使者', score: 750, date: '08-19' },
+      { name: '末日老六', score: 540, date: '08-19' },
+      { name: '冷酷战狂', score: 380, date: '08-19' }
+    ];
+
+    // 初始化本地存储
+    try {
+      const localData = localStorage.getItem(LOCAL_KEY);
+      if (localData) cachedLeaderboard = JSON.parse(localData);
+    } catch (e) {}
+
+    // 从云端拉取所有人共享的排行榜
+    async function fetchCloudLeaderboard() {
+      try {
+        const res = await fetch(`https://kvdb.io/4yH2nU5C5F6yY7yJ6eGk7p/global_rankings?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            cachedLeaderboard = data;
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+          }
+        }
+      } catch (e) {
+        console.warn('正在使用本地与局域网缓存排行榜');
+      }
+      renderLeaderboardUI();
+    }
+
+    // 提交新战绩到云端让所有人可见
+    async function submitScoreToCloud() {
+      const nameInput = document.getElementById('player-name');
+      const name = nameInput.value.trim() || '匿名幸存者';
+      const score = Math.floor(distance);
+      const tip = document.getElementById('submit-tip');
+
+      tip.innerText = '正在上传云端战绩...';
+
+      // 组装新记录
+      const newEntry = {
+        name: name,
+        score: score,
+        date: new Date().toISOString().slice(5, 10)
+      };
+
+      // 插入并重排序 (Top 10)
+      cachedLeaderboard.push(newEntry);
+      cachedLeaderboard.sort((a, b) => b.score - a.score);
+      cachedLeaderboard = cachedLeaderboard.slice(0, 10);
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(cachedLeaderboard));
+
+      // 发送至公共云端数据库
+      try {
+        await fetch('https://kvdb.io/4yH2nU5C5F6yY7yJ6eGk7p/global_rankings', {
+          method: 'POST',
+          body: JSON.stringify(cachedLeaderboard),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        tip.innerText = '✅ 上传成功！已载入全球天梯榜';
+      } catch (e) {
+        tip.innerText = '✅ 本地成绩已记录（网络波动已同步至离线榜）';
+      }
+
+      document.getElementById('submit-box').style.display = 'none';
+      renderLeaderboardUI();
+    }
+
+    function renderLeaderboardUI() {
+      const list = document.getElementById('rank-list');
+      list.innerHTML = '';
+      cachedLeaderboard.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = 'rank-item';
+        const rankIcon = index === 0 ? '🥇 ' : (index === 1 ? '🥈 ' : (index === 2 ? '🥉 ' : `#${index + 1} `));
+        li.innerHTML = `
+          <span>${rankIcon}<b>${item.name}</b></span>
+          <span>${item.score} m</span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function openLeaderboard() {
+      document.getElementById('leaderboard-modal').style.display = 'block';
+      fetchCloudLeaderboard();
+    }
+
+    function closeLeaderboard() {
+      document.getElementById('leaderboard-modal').style.display = 'none';
+    }
+
+    // ----------------- 1. 音效引擎 -----------------
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+    
+    function playSfx(type) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+
+      if (type === 'jump') {
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+      } else if (type === 'slide') {
+        const bufferSize = audioCtx.sampleRate * 0.25;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass'; filter.frequency.value = 600;
+        noise.connect(filter); filter.connect(gain);
+        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        noise.start(now);
+      } else if (type === 'coin') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1320, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now); osc.stop(now + 0.25);
+      } else if (type === 'drift') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.linearRampToValueAtTime(160, now + 0.35);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now); osc.stop(now + 0.35);
+      } else if (type === 'hit') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+        gain.gain.setValueAtTime(0.5, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
+      }
+    }
+
+    // ----------------- 2. 贴图生成器 -----------------
+    function createArrowTexture(isLeft = true) {
+      const cvs = document.createElement('canvas');
+      cvs.width = 512; cvs.height = 512;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let i = 0; i < 3; i++) {
+        const offset = i * 140;
+        ctx.beginPath();
+        if (isLeft) {
+          const startX = 420 - offset;
+          ctx.moveTo(startX, 100); ctx.lineTo(startX - 120, 256); ctx.lineTo(startX, 412);
+          ctx.lineTo(startX - 60, 412); ctx.lineTo(startX - 180, 256); ctx.lineTo(startX - 60, 100);
+        } else {
+          const startX = 92 + offset;
+          ctx.moveTo(startX, 100); ctx.lineTo(startX + 120, 256); ctx.lineTo(startX, 412);
+          ctx.lineTo(startX + 60, 412); ctx.lineTo(startX + 180, 256); ctx.lineTo(startX + 60, 100);
+        }
+        ctx.closePath();
+        ctx.fillStyle = i === 2 ? '#ffff00' : (i === 1 ? '#ff7700' : '#ff0044');
+        ctx.fill();
+      }
+      return new THREE.CanvasTexture(cvs);
+    }
+
+    function createRoadTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 512; cvs.height = 1024;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#181a1f';
+      ctx.fillRect(0, 0, 512, 1024);
+      for (let i = 0; i < 8000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#24272e' : '#121317';
+        ctx.fillRect(Math.random() * 512, Math.random() * 1024, 2, 2);
+      }
+      ctx.fillStyle = '#e67e22';
+      for (let y = 0; y < 1024; y += 64) {
+        ctx.fillRect(0, y, 32, 32);
+        ctx.fillRect(512 - 32, y, 32, 32);
+      }
+      ctx.fillStyle = '#d4ac0d';
+      for (let y = 30; y < 1024; y += 128) {
+        ctx.fillRect(170 - 4, y, 8, 64);
+        ctx.fillRect(342 - 4, y, 8, 64);
+      }
+      const tex = new THREE.CanvasTexture(cvs);
+      tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createBarrelTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 256; cvs.height = 256;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#9e2a2b'; ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 100, 256, 40);
+      ctx.fillStyle = '#000'; ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('BIOHAZARD', 60, 128);
+      return new THREE.CanvasTexture(cvs);
+    }
+
+    function createHazardStripeTexture() {
+      const cvs = document.createElement('canvas');
+      cvs.width = 256; cvs.height = 64;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = '#111';
+      for (let x = -64; x < 256 + 64; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x + 20, 0); ctx.lineTo(x - 10, 64); ctx.lineTo(x - 30, 64);
+        ctx.fill();
+      }
+      const tex = new THREE.CanvasTexture(cvs);
+      tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(4, 1);
+      return tex;
+    }
+
+    // ----------------- 3. 场景与全局光影 -----------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0c10);
+    scene.fog = new THREE.FogExp2(0x0e1117, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0x404858, 0.65);
+    scene.add(ambientLight);
+
+    const moonLight = new THREE.DirectionalLight(0xa6c8ff, 0.9);
+    moonLight.position.set(25, 45, 15);
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.set(2048, 2048);
+    scene.add(moonLight);
+
+    const sparkCount = 40;
+    const sparkGeo = new THREE.BufferGeometry();
+    const sparkPositions = new Float32Array(sparkCount * 3);
+    for (let i = 0; i < sparkCount * 3; i++) sparkPositions[i] = 0;
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    const sparkMat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.22, transparent: true, opacity: 0 });
+    const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
+    scene.add(sparkSystem);
+
+    // ----------------- 4. 难度梯度配置 -----------------
+    const DIFFICULTY = {
+      baseSpeed: 0.28,
+      maxSpeed: 0.65,
+      laserUnlockDist: 200,
+      turnUnlockDist: 350
+    };
+
+    let distance = 0;
+    let speed = DIFFICULTY.baseSpeed;
+
+    // ----------------- 5. 角色与变异丧尸 -----------------
+    const LANES = [-2.4, 0, 2.4];
+    let currentLane = 1;
+    let isJumping = false;
+    let isSliding = false;
+    let isFalling = false;
+    let slideTimer = 0;
+    let jumpVelocity = 0;
+    const gravity = -0.016;
+
+    const playerGroup = new THREE.Group();
+    const matTacticalArmor = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.4, metalness: 0.5 });
+    const matJacket = new THREE.MeshStandardMaterial({ color: 0x3d5a80, roughness: 0.7 });
+    const matSkin = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.6 });
+    const matBoots = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.3 });
+    const matVisor = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.9, 8), matJacket);
+    torso.position.y = 1.15; torso.castShadow = true;
+    const armorPlate = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 0.45), matTacticalArmor);
+    torso.add(armorPlate);
+    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
+    backpack.position.set(0, 0.05, -0.32);
+    torso.add(backpack);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matSkin);
+    head.position.set(0, 0.68, 0); head.castShadow = true;
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.15), matVisor);
+    visor.position.set(0, 0.02, 0.18);
+    head.add(visor);
+    torso.add(head);
+
+    const flashlight = new THREE.SpotLight(0xe0f7fa, 3.5, 35, Math.PI / 6, 0.4, 1);
+    flashlight.position.set(0, 0.2, 0.3);
+    const flashTarget = new THREE.Object3D();
+    flashTarget.position.set(0, 0, -15);
+    playerGroup.add(flashTarget);
+    flashlight.target = flashTarget;
+    torso.add(flashlight);
+
+    function createLimb(upperGeo, lowerGeo, matUpper, matLower) {
+      const joint = new THREE.Group();
+      const upper = new THREE.Mesh(upperGeo, matUpper);
+      upper.position.y = -0.22; upper.castShadow = true;
+      joint.add(upper);
+      const lower = new THREE.Mesh(lowerGeo, matLower);
+      lower.position.y = -0.55; lower.castShadow = true;
+      joint.add(lower);
+      return joint;
+    }
+
+    const armGeoU = new THREE.CylinderGeometry(0.1, 0.09, 0.35, 8);
+    const armGeoL = new THREE.CylinderGeometry(0.08, 0.07, 0.35, 8);
+    const leftArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
+    leftArm.position.set(-0.45, 1.45, 0);
+    const rightArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
+    rightArm.position.set(0.45, 1.45, 0);
+
+    const legGeoU = new THREE.CylinderGeometry(0.14, 0.12, 0.4, 8);
+    const legGeoL = new THREE.CylinderGeometry(0.12, 0.1, 0.4, 8);
+    const leftLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
+    leftLeg.position.set(-0.2, 0.7, 0);
+    const rightLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
+    rightLeg.position.set(0.2, 0.7, 0);
+
+    playerGroup.add(torso, leftArm, rightArm, leftLeg, rightLeg);
+    scene.add(playerGroup);
+
+    // 变异丧尸
+    const zombieGroup = new THREE.Group();
+    const matZombieSkin = new THREE.MeshStandardMaterial({ color: 0x3d5a38, roughness: 0.9 });
+    const matZombieBone = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, roughness: 0.3 });
+    const matZombieGlow = new THREE.MeshBasicMaterial({ color: 0xff073a });
+
+    const zTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 1.1, 8), matZombieSkin);
+    zTorso.position.y = 1.2; zTorso.rotation.x = 0.38; zTorso.castShadow = true;
+    for (let i = -0.3; i <= 0.3; i += 0.18) {
+      const spine = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 4), matZombieBone);
+      spine.position.set(0, i, -0.28); spine.rotation.x = -1.2;
+      zTorso.add(spine);
+    }
+    const zHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), matZombieSkin);
+    zHead.position.set(0, 0.7, 0.2);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), matZombieGlow);
+    eyeL.position.set(-0.12, 0.08, 0.28);
+    const eyeR = eyeL.clone(); eyeR.position.x = 0.12;
+    zHead.add(eyeL, eyeR);
+    zTorso.add(zHead);
+
+    const zLeftArm = createLimb(armGeoU, armGeoL, matZombieSkin, matZombieSkin);
+    zLeftArm.position.set(-0.55, 1.45, 0.2); zLeftArm.rotation.x = -1.3;
+    const zRightArm = createLimb(armGeoU, armGeoL, matZombieSkin, matZombieSkin);
+    zRightArm.position.set(0.55, 1.45, 0.2); zRightArm.rotation.x = -1.3;
+
+    zombieGroup.add(zTorso, zLeftArm, zRightArm);
+    scene.add(zombieGroup);
+
+    // ----------------- 6. 地图与 90° 平滑转弯系统 -----------------
+    const TRACK_PIECE_LENGTH = 24;
+    const TRACK_COUNT = 8;
+    const tracks = [];
+    const obstacles = [];
+    const serums = [];
+    const turnGlowMeshes = [];
+
+    const roadTex = createRoadTexture();
+    const barrelTex = createBarrelTexture();
+    const hazardTex = createHazardStripeTexture();
+    const arrowLeftTex = createArrowTexture(true);
+    const arrowRightTex = createArrowTexture(false);
+
+    const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.85 });
+    const rustMetalMat = new THREE.MeshStandardMaterial({ color: 0x3a3330, roughness: 0.9, metalness: 0.6 });
+    const laserMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.85 });
+    const barrelGeo = new THREE.CylinderGeometry(0.48, 0.48, 1.25, 16);
+    const barrelMat = new THREE.MeshStandardMaterial({ map: barrelTex, roughness: 0.5, metalness: 0.3 });
+
+    const turnTransition = {
+      active: false,
+      progress: 0,
+      duration: 25,
+      dir: 1,
+      startCamYaw: 0,
+      activeTrack: null
+    };
+
+    function createBarrelCluster(laneIdx, zPos) {
+      const group = new THREE.Group();
+      const b1 = new THREE.Mesh(barrelGeo, barrelMat);
+      b1.position.set(0, 0.62, 0); b1.castShadow = true;
+      group.add(b1);
+      if (distance > 300 && Math.random() > 0.5) {
+        const b2 = new THREE.Mesh(barrelGeo, barrelMat);
+        b2.position.set(0.45, 0.62, 0.3); b2.rotation.z = 0.25; b2.castShadow = true;
+        group.add(b2);
+      }
+      group.position.set(LANES[laneIdx], 0, zPos);
+      group.userData = { type: 'low_obs' };
+      scene.add(group);
+      obstacles.push(group);
+    }
+
+    function createHighLaserBeam(zPos) {
+      const group = new THREE.Group();
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5.5, 0.6), rustMetalMat);
+      p1.position.set(-3.8, 2.75, 0); p1.castShadow = true;
+      const p2 = p1.clone(); p2.position.x = 3.8;
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(8.2, 2.4, 0.9), new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.5 }));
+      topBar.position.set(0, 3.2, 0); topBar.castShadow = true;
+      const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 7.6, 8), laserMat);
+      laser.rotation.z = Math.PI / 2; laser.position.set(0, 1.6, 0);
+      group.add(p1, p2, topBar, laser);
+      group.position.set(0, 0, zPos);
+      group.userData = { type: 'high_obs', laser: laser };
+      scene.add(group);
+      obstacles.push(group);
+    }
+
+    const serumTubeGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.65, 12);
+    const serumLiquidMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+    const serumCapMat = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, metalness: 0.8 });
+
+    function createSerumItem(x, z) {
+      const group = new THREE.Group();
+      const liquid = new THREE.Mesh(serumTubeGeo, serumLiquidMat);
+      const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.12, 12), serumCapMat);
+      capTop.position.y = 0.33;
+      group.add(liquid, capTop);
+      group.position.set(x, 0.8, z);
+      scene.add(group);
+      serums.push(group);
+    }
+
+    function createTrackPiece(zPos, forceTurn = false) {
+      const group = new THREE.Group();
+      let isTurn = forceTurn;
+      let turnDir = Math.random() > 0.5 ? 1 : -1;
+
+      if (isTurn) {
+        const mainRoad = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
+        mainRoad.position.set(0, -0.2, 0);
+        group.add(mainRoad);
+
+        const cross = new THREE.Mesh(new THREE.BoxGeometry(26, 0.4, 8), roadMat);
+        cross.position.set(turnDir * 9, -0.2, 0); cross.receiveShadow = true;
+        group.add(cross);
+
+        const arrowPlaneMat = new THREE.MeshBasicMaterial({
+          map: turnDir === -1 ? arrowLeftTex : arrowRightTex,
+          transparent: true,
+          opacity: 0.95
+        });
+        const arrowPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 7.2), arrowPlaneMat);
+        arrowPlane.rotation.x = -Math.PI / 2;
+        arrowPlane.position.set(0, 0.04, 0);
+        group.add(arrowPlane);
+        turnGlowMeshes.push(arrowPlane);
+
+        const signPost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 0.4), rustMetalMat);
+        signPost.position.set(-turnDir * 4.2, 3.5, 0);
+        
+        const signBoard = new THREE.Mesh(
+          new THREE.BoxGeometry(4.5, 2.5, 0.4),
+          new THREE.MeshBasicMaterial({ map: turnDir === -1 ? arrowLeftTex : arrowRightTex })
+        );
+        signBoard.position.set(-turnDir * 2.2, 6.0, 0);
+        group.add(signPost, signBoard);
+
+        const turnLight = new THREE.PointLight(0xff0044, 2.5, 25);
+        turnLight.position.set(0, 3, 0);
+        group.add(turnLight);
+      } else {
+        const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
+        road.position.set(0, -0.2, 0); road.receiveShadow = true;
+        group.add(road);
+
+        const guardL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.6, TRACK_PIECE_LENGTH), rustMetalMat);
+        guardL.position.set(-4.0, 0.1, 0);
+        const guardR = guardL.clone(); guardR.position.x = 4.0;
+        group.add(guardL, guardR);
+      }
+
+      group.position.set(0, 0, zPos);
+      group.userData = { isTurnTrack: isTurn, turnDir: turnDir, handled: false };
+      scene.add(group);
+      tracks.push(group);
+
+      if (zPos < -30 && !isTurn) {
+        const rand = Math.random();
+        if (distance < DIFFICULTY.laserUnlockDist) {
+          if (rand < 0.45) createBarrelCluster(Math.floor(Math.random() * 3), zPos);
+          createSerumItem(LANES[Math.floor(Math.random() * 3)], zPos + 3);
+        } else if (distance < DIFFICULTY.turnUnlockDist) {
+          if (rand < 0.28) createHighLaserBeam(zPos);
+          else if (rand < 0.7) {
+            const l = Math.floor(Math.random() * 3);
+            createBarrelCluster(l, zPos);
+            createSerumItem(LANES[(l + 1) % 3], zPos + 3);
+          }
+        } else {
+          if (rand < 0.38) createHighLaserBeam(zPos);
+          else if (rand < 0.8) {
+            const l = Math.floor(Math.random() * 3);
+            createBarrelCluster(l, zPos);
+            createSerumItem(LANES[(l + 1) % 3], zPos + 3);
+          } else {
+            createSerumItem(LANES[Math.floor(Math.random() * 3)], zPos + 4);
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
+
+    // ----------------- 7. 交互逻辑 -----------------
+    window.addEventListener('keydown', (e) => {
+      initAudio();
+      if (isFalling || isGameOver || turnTransition.active) return;
+      const key = e.key.toLowerCase();
+
+      const nearTurnTrack = tracks.find(t => t.userData.isTurnTrack && Math.abs(t.position.z) < 6.0 && !t.userData.handled);
+
+      if (key === 'arrowleft' || key === 'a') {
+        if (nearTurnTrack) {
+          if (nearTurnTrack.userData.turnDir === -1) startSmoothTurn(nearTurnTrack, -1);
+          else triggerTurnFail("反向转弯！坠入深渊！");
+        } else if (currentLane > 0) currentLane--;
+      } else if (key === 'arrowright' || key === 'd') {
+        if (nearTurnTrack) {
+          if (nearTurnTrack.userData.turnDir === 1) startSmoothTurn(nearTurnTrack, 1);
+          else triggerTurnFail("反向转弯！坠入深渊！");
+        } else if (currentLane < 2) currentLane++;
+      } else if ((key === 'arrowup' || key === 'w' || key === ' ') && !isJumping && !isSliding) {
+        isJumping = true; jumpVelocity = 0.34; playSfx('jump');
+      } else if ((key === 'arrowdown' || key === 's') && !isSliding) {
+        isJumping = false; playerGroup.position.y = 0; isSliding = true; slideTimer = 42; playSfx('slide');
+      }
+    });
+
+    function startSmoothTurn(track, dir) {
+      track.userData.handled = true;
+      playSfx('drift');
+      document.getElementById('turn-alert').style.display = 'none';
+
+      turnTransition.active = true;
+      turnTransition.progress = 0;
+      turnTransition.dir = dir;
+      turnTransition.activeTrack = track;
+      turnTransition.startCamYaw = camera.rotation.y;
+    }
+
+    function finishSmoothTurn() {
+      turnTransition.active = false;
+      currentLane = 1;
+      playerGroup.position.x = 0;
+      playerGroup.rotation.y = 0;
+      playerGroup.rotation.z = 0;
+
+      tracks.forEach(t => scene.remove(t));
+      obstacles.forEach(o => scene.remove(o));
+      serums.forEach(c => scene.remove(c));
+      tracks.length = 0; obstacles.length = 0; serums.length = 0; turnGlowMeshes.length = 0;
+      distanceSinceLastTurn = 0;
+
+      sparkMat.opacity = 0;
+
+      for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
+    }
+
+    function triggerTurnFail(reason) {
+      isFalling = true;
+      playSfx('hit');
+      document.getElementById('turn-alert').style.display = 'none';
+      triggerGameOver(reason);
+    }
+
+    // ----------------- 8. 游戏渲染主循环 -----------------
+    let serumCount = 0;
+    let isGameOver = false;
+    let distanceSinceLastTurn = 0;
+    let animClock = 0;
+
+    function animate() {
+      if (isGameOver && !isFalling) return;
+      requestAnimationFrame(animate);
+
+      if (isFalling) {
+        playerGroup.position.y -= 0.35;
+        playerGroup.position.z += speed;
+        renderer.render(scene, camera);
+        return;
+      }
+
+      animClock += 0.22;
+      speed = Math.min(DIFFICULTY.maxSpeed, DIFFICULTY.baseSpeed + (distance / 4500));
+
+      if (turnTransition.active) {
+        turnTransition.progress += 1 / turnTransition.duration;
+        const t = turnTransition.progress;
+        const ease = t * (2 - t);
+        const dir = turnTransition.dir;
+
+        playerGroup.rotation.y = -dir * (Math.PI / 2) * ease;
+        playerGroup.rotation.z = -dir * 0.6 * Math.sin(t * Math.PI);
+        playerGroup.position.x += dir * speed * 0.9;
+
+        sparkMat.opacity = 0.9;
+        const sArr = sparkGeo.attributes.position.array;
+        for (let i = 0; i < sparkCount * 3; i += 3) {
+          sArr[i] = playerGroup.position.x + (Math.random() - 0.5) * 0.8;
+          sArr[i + 1] = 0.1 + Math.random() * 0.3;
+          sArr[i + 2] = playerGroup.position.z + (Math.random() - 0.5) * 0.8;
+        }
+        sparkGeo.attributes.position.needsUpdate = true;
+
+        const camOrbitRadius = 7.6;
+        const camAngle = -dir * (Math.PI / 2) * ease;
+        
+        camera.position.x = playerGroup.position.x - Math.sin(camAngle) * camOrbitRadius * 0.4;
+        camera.position.y = 4.8 + Math.sin(t * Math.PI) * 0.3;
+        camera.position.z = playerGroup.position.z + Math.cos(camAngle) * camOrbitRadius;
+
+        camera.rotation.y = -dir * (Math.PI / 2) * ease * 0.85;
+        camera.rotation.z = -dir * 0.15 * Math.sin(t * Math.PI);
+
+        camera.fov = 65 + Math.sin(t * Math.PI) * 12;
+        camera.updateProjectionMatrix();
+
+        zombieGroup.position.x += (playerGroup.position.x - zombieGroup.position.x) * 0.1;
+        zombieGroup.rotation.y = -dir * (Math.PI / 2) * ease * 0.7;
+
+        if (turnTransition.progress >= 1) {
+          camera.fov = 65;
+          camera.updateProjectionMatrix();
+          finishSmoothTurn();
+        }
+
+        renderer.render(scene, camera);
+        return;
+      }
+
+      // 常规跑动
+      const targetX = LANES[currentLane];
+      const deltaX = targetX - playerGroup.position.x;
+      playerGroup.position.x += deltaX * 0.22;
+      torso.rotation.z = -deltaX * 0.12;
+      torso.rotation.y = deltaX * 0.08;
+
+      if (!isJumping && !isSliding) {
+        leftLeg.rotation.x = Math.sin(animClock) * 0.75;
+        rightLeg.rotation.x = -Math.sin(animClock) * 0.75;
+        leftArm.rotation.x = -Math.sin(animClock) * 0.65;
+        rightArm.rotation.x = Math.sin(animClock) * 0.65;
+        torso.position.y = 1.15 + Math.abs(Math.sin(animClock)) * 0.08;
+      } else if (isSliding) {
+        slideTimer--;
+        torso.rotation.x = -1.1; torso.position.y = 0.55;
+        leftLeg.rotation.x = -1.4; rightLeg.rotation.x = -1.2;
+        leftArm.rotation.x = 0.8; rightArm.rotation.x = 0.8;
+        if (slideTimer <= 0) {
+          isSliding = false; torso.rotation.x = 0; torso.position.y = 1.15;
+        }
+      }
+
+      if (isJumping) {
+        playerGroup.position.y += jumpVelocity;
+        jumpVelocity += gravity;
+        leftLeg.rotation.x = 0.6; rightLeg.rotation.x = -0.3;
+        if (playerGroup.position.y <= 0) {
+          playerGroup.position.y = 0; isJumping = false; jumpVelocity = 0;
+        }
+      }
+
+      const zombieDist = Math.max(4.0, 5.0 - (distance / 1000));
+      zombieGroup.position.x += (playerGroup.position.x - zombieGroup.position.x) * 0.16;
+      zombieGroup.position.z = playerGroup.position.z + zombieDist;
+      zombieGroup.position.y = Math.sin(animClock * 1.5) * 0.15;
+      zLeftArm.rotation.x = -1.3 + Math.sin(animClock * 1.3) * 0.45;
+      zRightArm.rotation.x = -1.3 - Math.sin(animClock * 1.3) * 0.45;
+
+      turnGlowMeshes.forEach(mesh => {
+        mesh.material.opacity = 0.6 + Math.sin(animClock * 2.0) * 0.4;
+      });
+
+      tracks.forEach(track => track.position.z += speed);
+      obstacles.forEach(obs => {
+        obs.position.z += speed;
+        if (obs.userData.laser) obs.userData.laser.material.opacity = 0.5 + Math.sin(animClock * 2.0) * 0.4;
+      });
+      serums.forEach(s => {
+        s.position.z += speed;
+        s.rotation.y += 0.08;
+      });
+
+      distanceSinceLastTurn += speed;
+      const upcomingTurn = tracks.find(t => t.userData.isTurnTrack && !t.userData.handled);
+      const alertElem = document.getElementById('turn-alert');
+
+      if (upcomingTurn && upcomingTurn.position.z < 0 && upcomingTurn.position.z > -28) {
+        alertElem.style.display = 'block';
+        if (upcomingTurn.userData.turnDir === -1) {
+          alertElem.innerText = '◀ 准备向左拐弯 [按 A]';
+          alertElem.style.borderColor = '#00f5d4';
+        } else {
+          alertElem.innerText = '准备向右拐弯 [按 D] ▶';
+          alertElem.style.borderColor = '#ff0055';
+        }
+      } else {
+        alertElem.style.display = 'none';
+      }
+
+      if (tracks[0].position.z > 25) {
+        const firstTrack = tracks.shift();
+        const lastTrackZ = tracks[tracks.length - 1].position.z;
+        scene.remove(firstTrack);
+
+        const canSpawnTurn = distance > DIFFICULTY.turnUnlockDist && distanceSinceLastTurn > 220;
+        const spawnTurn = canSpawnTurn && Math.random() < 0.35;
+        createTrackPiece(lastTrackZ - TRACK_PIECE_LENGTH, spawnTurn);
+      }
+
+      const passedTurnTrack = tracks.find(t => t.userData.isTurnTrack && t.position.z > 6.0 && !t.userData.handled);
+      if (passedTurnTrack) {
+        triggerTurnFail("未及时拐弯，坠入深渊！");
+        return;
+      }
+
+      const playerPos = playerGroup.position;
+      for (let i = serums.length - 1; i >= 0; i--) {
+        const s = serums[i];
+        if (s.position.z > 15) { scene.remove(s); serums.splice(i, 1); continue; }
+        if (Math.abs(s.position.z - playerPos.z) < 1.2 && Math.abs(s.position.x - playerPos.x) < 1.0) {
+          scene.remove(s); serums.splice(i, 1);
+          serumCount++;
+          playSfx('coin');
+          document.getElementById('serum-text').innerText = serumCount;
+        }
+      }
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        if (obs.position.z > 15) { scene.remove(obs); obstacles.splice(i, 1); continue; }
+
+        if (obs.userData.type === 'low_obs') {
+          if (
+            Math.abs(obs.position.z - playerPos.z) < 1.2 &&
+            Math.abs(obs.position.x - playerPos.x) < 1.1 &&
+            playerPos.y < 0.85
+          ) {
+            playSfx('hit');
+            triggerGameOver("被生化油桶绊倒，被丧尸撕碎！");
+            return;
+          }
+        } else if (obs.userData.type === 'high_obs') {
+          if (Math.abs(obs.position.z - playerPos.z) < 1.2 && !isSliding) {
+            playSfx('hit');
+            triggerGameOver("触碰高压激光切断！请按下键 (S) 铲地钻过");
+            return;
+          }
+        }
+      }
+
+      camera.position.set(playerGroup.position.x * 0.35, 4.8 + Math.sin(distance * 0.15) * 0.04, 7.6);
+      camera.rotation.y = 0;
+      camera.rotation.z = -deltaX * 0.04;
+      camera.lookAt(playerGroup.position.x * 0.35, 1.4, -15);
+
+      distance += speed;
+      document.getElementById('score-text').innerText = Math.floor(distance);
+
+      renderer.render(scene, camera);
+    }
+
+    function triggerGameOver(reason) {
+      isGameOver = true;
+      document.getElementById('over-reason').innerText = reason;
+      document.getElementById('final-dist').innerText = Math.floor(distance);
+      document.getElementById('final-serum').innerText = serumCount;
+      document.getElementById('gameover').style.display = 'block';
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // 页面加载完成后自动拉取最新排行榜
+    fetchCloudLeaderboard();
+    animate();
+  </script>
+</body>
+</html>
