@@ -2,167 +2,154 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>末日逃亡：丧尸绝境 3D (全球排行榜联机版)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>末日逃亡：丧尸绝境 3D (移动端触屏版)</title>
   <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; overflow: hidden; background: #020305; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
-    #canvas-container { width: 100vw; height: 100vh; }
-    
+    * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #020305;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: none; /* 彻底阻止浏览器默认滑动回弹与下拉刷新 */
+    }
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+
     #vignette {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-      box-shadow: inset 0 0 120px rgba(0,0,0,0.85), inset 0 0 40px rgba(180, 20, 20, 0.4);
+      box-shadow: inset 0 0 80px rgba(0,0,0,0.85), inset 0 0 30px rgba(180, 20, 20, 0.4);
       z-index: 5;
     }
 
+    /* 顶部 HUD 响应式布局 */
     #hud {
-      position: absolute; top: 20px; left: 24px; color: #fff;
-      display: flex; gap: 16px; z-index: 10;
+      position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 14px;
+      display: flex; gap: 8px; z-index: 10;
     }
     .hud-card {
-      background: rgba(10, 12, 18, 0.75); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 60, 60, 0.3); padding: 10px 18px;
-      border-radius: 8px; font-weight: 800; font-size: 18px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      background: rgba(10, 12, 18, 0.8); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 60, 60, 0.3); padding: 6px 12px;
+      border-radius: 8px; font-weight: 800; font-size: 14px; color: #fff;
     }
-    .hud-card span { color: #00ffcc; font-size: 22px; margin-left: 6px; }
+    .hud-card span { color: #00ffcc; font-size: 16px; margin-left: 4px; }
 
-    #danger-bar {
-      position: absolute; top: 20px; right: 170px; z-index: 10;
-      background: rgba(20, 5, 5, 0.85); backdrop-filter: blur(8px);
-      border: 1px solid #ff3333; padding: 10px 18px; border-radius: 8px;
-      color: #ff4444; font-weight: bold; font-size: 14px;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .pulse-dot { width: 10px; height: 10px; background: #ff2222; border-radius: 50%; animation: pulse 0.8s infinite; }
-    @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.5; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.8); opacity: 0.5; } }
-
-    /* 顶部排行榜按钮 */
     #btn-open-rank {
-      position: absolute; top: 20px; right: 24px; z-index: 12;
-      background: rgba(255, 170, 0, 0.85); color: #000; border: none;
-      padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px;
-      cursor: pointer; box-shadow: 0 0 15px rgba(255, 170, 0, 0.4); transition: 0.2s;
+      position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 14px; z-index: 12;
+      background: rgba(255, 170, 0, 0.9); color: #000; border: none;
+      padding: 7px 14px; border-radius: 8px; font-weight: 800; font-size: 13px;
+      cursor: pointer; box-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
     }
-    #btn-open-rank:hover { transform: scale(1.05); filter: brightness(1.2); }
 
     #turn-alert {
-      display: none; position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(255, 17, 68, 0.85); color: #fff; padding: 12px 30px; border-radius: 30px;
-      font-size: 24px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 10px #000;
-      box-shadow: 0 0 30px #ff1144; z-index: 15; animation: alertBounce 0.4s infinite alternate;
+      display: none; position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(255, 17, 68, 0.9); color: #fff; padding: 10px 22px; border-radius: 25px;
+      font-size: 18px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 8px #000;
+      box-shadow: 0 0 25px #ff1144; z-index: 15; white-space: nowrap;
+      animation: alertBounce 0.4s infinite alternate;
     }
-    @keyframes alertBounce { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+    @keyframes alertBounce { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.08); } }
 
     #controls-hint {
-      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: rgba(10, 12, 18, 0.8); backdrop-filter: blur(6px);
-      padding: 8px 24px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.15);
-      color: #ccc; font-size: 13px; z-index: 10;
+      position: absolute; bottom: calc(15px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+      background: rgba(10, 12, 18, 0.85); backdrop-filter: blur(6px);
+      padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+      color: #ddd; font-size: 12px; z-index: 10; white-space: nowrap; pointer-events: none;
     }
     #controls-hint b { color: #00ffcc; }
 
-    /* 结算弹窗 */
+    /* 结算弹窗适配移动端屏幕 */
     #gameover {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff; text-align: center;
       background: rgba(12, 14, 20, 0.96); backdrop-filter: blur(16px);
-      padding: 30px 45px; border-radius: 16px; border: 2px solid #ff3333;
-      box-shadow: 0 0 50px rgba(255, 30, 30, 0.5); z-index: 20; min-width: 360px;
+      padding: 24px 28px; border-radius: 16px; border: 2px solid #ff3333;
+      box-shadow: 0 0 40px rgba(255, 30, 30, 0.5); z-index: 20;
+      width: 88vw; max-width: 360px;
     }
-    #gameover h1 { margin: 0 0 8px 0; color: #ff3333; font-size: 30px; letter-spacing: 2px; }
-    #gameover p { margin: 6px 0; color: #aaa; font-size: 15px; }
+    #gameover h1 { margin: 0 0 8px 0; color: #ff3333; font-size: 24px; }
+    #gameover p { margin: 4px 0; color: #aaa; font-size: 14px; }
     #gameover span { color: #fff; font-weight: bold; }
 
-    .submit-box {
-      margin-top: 15px; display: flex; gap: 8px; justify-content: center;
-    }
+    .submit-box { margin-top: 14px; display: flex; gap: 6px; justify-content: center; }
     .submit-box input {
-      background: #181a24; border: 1px solid #ff5555; color: #fff; padding: 10px 14px;
-      border-radius: 6px; font-size: 14px; outline: none; width: 140px; text-align: center;
+      background: #181a24; border: 1px solid #ff5555; color: #fff; padding: 8px 10px;
+      border-radius: 6px; font-size: 14px; outline: none; width: 55%; text-align: center;
     }
     .submit-box button {
-      background: #00e676; color: #000; border: none; padding: 10px 16px;
-      border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s;
+      background: #00e676; color: #000; border: none; padding: 8px 14px;
+      border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer;
     }
-    .submit-box button:hover { transform: scale(1.05); }
 
-    .gameover-btns {
-      margin-top: 20px; display: flex; gap: 12px; justify-content: center;
-    }
+    .gameover-btns { margin-top: 16px; display: flex; gap: 10px; justify-content: center; }
     .btn-restart {
-      padding: 12px 28px; font-size: 15px; font-weight: bold;
+      flex: 1; padding: 10px 0; font-size: 14px; font-weight: bold;
       color: #fff; background: linear-gradient(135deg, #ff3333, #aa0000);
-      border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+      border: none; border-radius: 8px; cursor: pointer;
     }
-    .btn-restart:hover { transform: scale(1.05); filter: brightness(1.2); }
     .btn-view-rank {
-      padding: 12px 20px; font-size: 15px; font-weight: bold;
+      flex: 1; padding: 10px 0; font-size: 14px; font-weight: bold;
       color: #fff; background: #33394d; border: none; border-radius: 8px; cursor: pointer;
     }
 
-    /* 全球排行榜模态框 */
+    /* 排行榜弹窗移动端适配 */
     #leaderboard-modal {
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); color: #fff;
       background: rgba(14, 16, 24, 0.98); backdrop-filter: blur(18px);
-      padding: 30px 40px; border-radius: 16px; border: 2px solid #ffaa00;
-      box-shadow: 0 0 50px rgba(255, 170, 0, 0.4); z-index: 30; width: 380px;
+      padding: 22px 20px; border-radius: 16px; border: 2px solid #ffaa00;
+      box-shadow: 0 0 40px rgba(255, 170, 0, 0.4); z-index: 30;
+      width: 90vw; max-width: 360px;
     }
-    #leaderboard-modal h2 { margin: 0 0 15px 0; color: #ffaa00; text-align: center; font-size: 24px; }
-    .rank-list { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
+    #leaderboard-modal h2 { margin: 0 0 12px 0; color: #ffaa00; text-align: center; font-size: 20px; }
+    .rank-list { list-style: none; padding: 0; margin: 0; max-height: 240px; overflow-y: auto; }
     .rank-item {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 14px;
+      padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 13px;
     }
-    .rank-item:nth-child(1) { color: #ffd700; font-weight: bold; font-size: 16px; }
+    .rank-item:nth-child(1) { color: #ffd700; font-weight: bold; }
     .rank-item:nth-child(2) { color: #c0c0c0; font-weight: bold; }
     .rank-item:nth-child(3) { color: #cd7f32; font-weight: bold; }
     .rank-close {
-      margin-top: 20px; width: 100%; padding: 10px; background: #444; border: none;
-      color: #fff; border-radius: 6px; font-weight: bold; cursor: pointer;
+      margin-top: 15px; width: 100%; padding: 10px; background: #444; border: none;
+      color: #fff; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;
     }
-    .rank-status { font-size: 12px; color: #888; text-align: center; margin-top: 6px; }
   </style>
 </head>
 <body>
   <div id="vignette"></div>
   <div id="hud">
-    <div class="hud-card">🏃 逃亡距离<span id="score-text">0</span> m</div>
-    <div class="hud-card">💉 血清<span id="serum-text">0</span></div>
+    <div class="hud-card">🏃 <span id="score-text">0</span> m</div>
+    <div class="hud-card">💉 <span id="serum-text">0</span></div>
   </div>
-  <div id="danger-bar"><div class="pulse-dot"></div>变异丧尸追击中</div>
-  <button id="btn-open-rank" onclick="openLeaderboard()">🏆 全球榜</button>
-  <div id="turn-alert">◀ 准备向左拐弯 [按 A]</div>
+  <button id="btn-open-rank" onclick="openLeaderboard()">🏆 排行榜</button>
+  <div id="turn-alert">◀ 准备向左滑拐弯</div>
   <div id="controls-hint">
-    <b>A / D</b>：换道 / 转弯 ｜ <b>W / 空格</b>：跳跃 ｜ <b>S</b>：下滑钻过激光梁
+    <b>滑动手势</b>：左右换道/过弯 ｜ 上滑跳跃 ｜ 下滑滑行
   </div>
 
   <!-- 结算弹窗 -->
   <div id="gameover">
     <h1 id="over-reason">丧尸扑杀撕碎</h1>
-    <p>逃亡生存距离: <span id="final-dist">0</span> m</p>
-    <p>搜集生化血清: <span id="final-serum">0</span> 支</p>
+    <p>逃亡距离: <span id="final-dist">0</span> m</p>
+    <p>收集血清: <span id="final-serum">0</span> 支</p>
 
-    <!-- 上传至全球排行榜 -->
     <div class="submit-box" id="submit-box">
-      <input type="text" id="player-name" placeholder="输入幸存者昵称" maxlength="8" value="幸存者">
+      <input type="text" id="player-name" placeholder="输入昵称" maxlength="6" value="幸存者">
       <button onclick="submitScoreToCloud()">上传战绩</button>
     </div>
-    <div id="submit-tip" style="font-size: 12px; color: #00ffcc; margin-top: 6px;"></div>
+    <div id="submit-tip" style="font-size: 11px; color: #00ffcc; margin-top: 6px;"></div>
 
     <div class="gameover-btns">
       <button class="btn-restart" onclick="location.reload()">重新突围</button>
-      <button class="btn-view-rank" onclick="openLeaderboard()">查看全球榜</button>
+      <button class="btn-view-rank" onclick="openLeaderboard()">天梯榜</button>
     </div>
   </div>
 
-  <!-- 全球排行榜窗口 -->
+  <!-- 排行榜弹窗 -->
   <div id="leaderboard-modal">
     <h2>🏆 全球幸存者天梯榜</h2>
     <ul class="rank-list" id="rank-list">
       <li class="rank-item"><span>加载中...</span></li>
     </ul>
-    <div class="rank-status" id="rank-status">云端数据实时同步中</div>
     <button class="rank-close" onclick="closeLeaderboard()">关闭</button>
   </div>
 
@@ -171,27 +158,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <script>
-    // ----------------- 0. 全球在线数据库 (Serverless Cloud API) -----------------
-    // 使用公开安全的无服务器键值存储仓库 (KVdb / Mockbin 多线路容灾)
-    const CLOUD_API_URL = 'https://api.counterapi.dev/v1/templerun3d_zombie/rankings';
+    // ----------------- 0. 全球排行榜存储 -----------------
     const LOCAL_KEY = 'templerun_global_leaderboard';
-
-    // 默认内置榜单
     let cachedLeaderboard = [
-      { name: '生化猎手', score: 1280, date: '08-19' },
-      { name: '疾风幽灵', score: 980, date: '08-19' },
-      { name: '黎明使者', score: 750, date: '08-19' },
-      { name: '末日老六', score: 540, date: '08-19' },
-      { name: '冷酷战狂', score: 380, date: '08-19' }
+      { name: '生化猎手', score: 1280 },
+      { name: '疾风幽灵', score: 980 },
+      { name: '黎明使者', score: 750 },
+      { name: '末日老六', score: 540 },
+      { name: '冷酷战狂', score: 380 }
     ];
 
-    // 初始化本地存储
     try {
       const localData = localStorage.getItem(LOCAL_KEY);
       if (localData) cachedLeaderboard = JSON.parse(localData);
     } catch (e) {}
 
-    // 从云端拉取所有人共享的排行榜
     async function fetchCloudLeaderboard() {
       try {
         const res = await fetch(`https://kvdb.io/4yH2nU5C5F6yY7yJ6eGk7p/global_rankings?t=${Date.now()}`);
@@ -202,44 +183,30 @@
             localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
           }
         }
-      } catch (e) {
-        console.warn('正在使用本地与局域网缓存排行榜');
-      }
+      } catch (e) {}
       renderLeaderboardUI();
     }
 
-    // 提交新战绩到云端让所有人可见
     async function submitScoreToCloud() {
       const nameInput = document.getElementById('player-name');
       const name = nameInput.value.trim() || '匿名幸存者';
       const score = Math.floor(distance);
       const tip = document.getElementById('submit-tip');
+      tip.innerText = '正在上传云端...';
 
-      tip.innerText = '正在上传云端战绩...';
-
-      // 组装新记录
-      const newEntry = {
-        name: name,
-        score: score,
-        date: new Date().toISOString().slice(5, 10)
-      };
-
-      // 插入并重排序 (Top 10)
-      cachedLeaderboard.push(newEntry);
+      cachedLeaderboard.push({ name: name, score: score });
       cachedLeaderboard.sort((a, b) => b.score - a.score);
       cachedLeaderboard = cachedLeaderboard.slice(0, 10);
       localStorage.setItem(LOCAL_KEY, JSON.stringify(cachedLeaderboard));
 
-      // 发送至公共云端数据库
       try {
         await fetch('https://kvdb.io/4yH2nU5C5F6yY7yJ6eGk7p/global_rankings', {
-          method: 'POST',
-          body: JSON.stringify(cachedLeaderboard),
+          method: 'POST', body: JSON.stringify(cachedLeaderboard),
           headers: { 'Content-Type': 'application/json' }
         });
-        tip.innerText = '✅ 上传成功！已载入全球天梯榜';
+        tip.innerText = '✅ 上传成功！已载入天梯榜';
       } catch (e) {
-        tip.innerText = '✅ 本地成绩已记录（网络波动已同步至离线榜）';
+        tip.innerText = '✅ 已收录至离线排行榜';
       }
 
       document.getElementById('submit-box').style.display = 'none';
@@ -253,10 +220,7 @@
         const li = document.createElement('li');
         li.className = 'rank-item';
         const rankIcon = index === 0 ? '🥇 ' : (index === 1 ? '🥈 ' : (index === 2 ? '🥉 ' : `#${index + 1} `));
-        li.innerHTML = `
-          <span>${rankIcon}<b>${item.name}</b></span>
-          <span>${item.score} m</span>
-        `;
+        li.innerHTML = `<span>${rankIcon}<b>${item.name}</b></span><span>${item.score} m</span>`;
         list.appendChild(li);
       });
     }
@@ -265,16 +229,18 @@
       document.getElementById('leaderboard-modal').style.display = 'block';
       fetchCloudLeaderboard();
     }
-
     function closeLeaderboard() {
       document.getElementById('leaderboard-modal').style.display = 'none';
     }
 
-    // ----------------- 1. 音效引擎 -----------------
+    // ----------------- 1. 音效引擎 (含移动端手势解锁) -----------------
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
-    function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
-    
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
     function playSfx(type) {
       if (!audioCtx) return;
       const now = audioCtx.currentTime;
@@ -288,16 +254,14 @@
         gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
         osc.start(now); osc.stop(now + 0.15);
       } else if (type === 'slide') {
-        const bufferSize = audioCtx.sampleRate * 0.25;
+        const bufferSize = audioCtx.sampleRate * 0.22;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        const noise = audioCtx.createBufferSource();
-        noise.buffer = buffer;
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'lowpass'; filter.frequency.value = 600;
+        const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 600;
         noise.connect(filter); filter.connect(gain);
-        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
         noise.start(now);
       } else if (type === 'coin') {
         osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
@@ -305,12 +269,10 @@
         gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
         osc.start(now); osc.stop(now + 0.25);
       } else if (type === 'drift') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.linearRampToValueAtTime(160, now + 0.35);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
-        osc.start(now); osc.stop(now + 0.35);
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(320, now);
+        osc.frequency.linearRampToValueAtTime(160, now + 0.3);
+        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
       } else if (type === 'hit') {
         osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now);
         osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
@@ -319,25 +281,23 @@
       }
     }
 
-    // ----------------- 2. 贴图生成器 -----------------
+    // ----------------- 2. 程序化贴图 -----------------
     function createArrowTexture(isLeft = true) {
       const cvs = document.createElement('canvas');
-      cvs.width = 512; cvs.height = 512;
+      cvs.width = 256; cvs.height = 256;
       const ctx = cvs.getContext('2d');
-      ctx.fillStyle = 'rgba(0, 0, 0, 0)';
-      ctx.fillRect(0, 0, 512, 512);
-
+      ctx.fillStyle = 'rgba(0, 0, 0, 0)'; ctx.fillRect(0, 0, 256, 256);
       for (let i = 0; i < 3; i++) {
-        const offset = i * 140;
+        const offset = i * 70;
         ctx.beginPath();
         if (isLeft) {
-          const startX = 420 - offset;
-          ctx.moveTo(startX, 100); ctx.lineTo(startX - 120, 256); ctx.lineTo(startX, 412);
-          ctx.lineTo(startX - 60, 412); ctx.lineTo(startX - 180, 256); ctx.lineTo(startX - 60, 100);
+          const startX = 210 - offset;
+          ctx.moveTo(startX, 50); ctx.lineTo(startX - 60, 128); ctx.lineTo(startX, 206);
+          ctx.lineTo(startX - 30, 206); ctx.lineTo(startX - 90, 128); ctx.lineTo(startX - 30, 50);
         } else {
-          const startX = 92 + offset;
-          ctx.moveTo(startX, 100); ctx.lineTo(startX + 120, 256); ctx.lineTo(startX, 412);
-          ctx.lineTo(startX + 60, 412); ctx.lineTo(startX + 180, 256); ctx.lineTo(startX + 60, 100);
+          const startX = 46 + offset;
+          ctx.moveTo(startX, 50); ctx.lineTo(startX + 60, 128); ctx.lineTo(startX, 206);
+          ctx.lineTo(startX + 30, 206); ctx.lineTo(startX + 90, 128); ctx.lineTo(startX + 30, 50);
         }
         ctx.closePath();
         ctx.fillStyle = i === 2 ? '#ffff00' : (i === 1 ? '#ff7700' : '#ff0044');
@@ -348,49 +308,31 @@
 
     function createRoadTexture() {
       const cvs = document.createElement('canvas');
-      cvs.width = 512; cvs.height = 1024;
+      cvs.width = 256; cvs.height = 512;
       const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#181a1f';
-      ctx.fillRect(0, 0, 512, 1024);
-      for (let i = 0; i < 8000; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? '#24272e' : '#121317';
-        ctx.fillRect(Math.random() * 512, Math.random() * 1024, 2, 2);
-      }
+      ctx.fillStyle = '#181a1f'; ctx.fillRect(0, 0, 256, 512);
       ctx.fillStyle = '#e67e22';
-      for (let y = 0; y < 1024; y += 64) {
-        ctx.fillRect(0, y, 32, 32);
-        ctx.fillRect(512 - 32, y, 32, 32);
+      for (let y = 0; y < 512; y += 48) {
+        ctx.fillRect(0, y, 20, 24); ctx.fillRect(256 - 20, y, 20, 24);
       }
       ctx.fillStyle = '#d4ac0d';
-      for (let y = 30; y < 1024; y += 128) {
-        ctx.fillRect(170 - 4, y, 8, 64);
-        ctx.fillRect(342 - 4, y, 8, 64);
+      for (let y = 20; y < 512; y += 96) {
+        ctx.fillRect(85 - 3, y, 6, 48); ctx.fillRect(171 - 3, y, 6, 48);
       }
       const tex = new THREE.CanvasTexture(cvs);
       tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
       return tex;
     }
 
-    function createBarrelTexture() {
-      const cvs = document.createElement('canvas');
-      cvs.width = 256; cvs.height = 256;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#9e2a2b'; ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 100, 256, 40);
-      ctx.fillStyle = '#000'; ctx.font = 'bold 20px sans-serif';
-      ctx.fillText('BIOHAZARD', 60, 128);
-      return new THREE.CanvasTexture(cvs);
-    }
-
     function createHazardStripeTexture() {
       const cvs = document.createElement('canvas');
-      cvs.width = 256; cvs.height = 64;
+      cvs.width = 128; cvs.height = 32;
       const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 0, 256, 64);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(0, 0, 128, 32);
       ctx.fillStyle = '#111';
-      for (let x = -64; x < 256 + 64; x += 32) {
+      for (let x = -32; x < 128 + 32; x += 16) {
         ctx.beginPath();
-        ctx.moveTo(x, 0); ctx.lineTo(x + 20, 0); ctx.lineTo(x - 10, 64); ctx.lineTo(x - 30, 64);
+        ctx.moveTo(x, 0); ctx.lineTo(x + 10, 0); ctx.lineTo(x - 5, 32); ctx.lineTo(x - 15, 32);
         ctx.fill();
       }
       const tex = new THREE.CanvasTexture(cvs);
@@ -407,11 +349,10 @@
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // 移动端锁定 DPR 为 1.5 ~ 2 之间，保障流畅 60 帧
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     const ambientLight = new THREE.AmbientLight(0x404858, 0.65);
@@ -420,10 +361,10 @@
     const moonLight = new THREE.DirectionalLight(0xa6c8ff, 0.9);
     moonLight.position.set(25, 45, 15);
     moonLight.castShadow = true;
-    moonLight.shadow.mapSize.set(2048, 2048);
+    moonLight.shadow.mapSize.set(1024, 1024);
     scene.add(moonLight);
 
-    const sparkCount = 40;
+    const sparkCount = 30;
     const sparkGeo = new THREE.BufferGeometry();
     const sparkPositions = new Float32Array(sparkCount * 3);
     for (let i = 0; i < sparkCount * 3; i++) sparkPositions[i] = 0;
@@ -432,7 +373,7 @@
     const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
     scene.add(sparkSystem);
 
-    // ----------------- 4. 难度梯度配置 -----------------
+    // ----------------- 4. 角色与模型装配 -----------------
     const DIFFICULTY = {
       baseSpeed: 0.28,
       maxSpeed: 0.65,
@@ -443,7 +384,6 @@
     let distance = 0;
     let speed = DIFFICULTY.baseSpeed;
 
-    // ----------------- 5. 角色与变异丧尸 -----------------
     const LANES = [-2.4, 0, 2.4];
     let currentLane = 1;
     let isJumping = false;
@@ -454,10 +394,10 @@
     const gravity = -0.016;
 
     const playerGroup = new THREE.Group();
-    const matTacticalArmor = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.4, metalness: 0.5 });
+    const matTacticalArmor = new THREE.MeshStandardMaterial({ color: 0x2b303a, roughness: 0.4 });
     const matJacket = new THREE.MeshStandardMaterial({ color: 0x3d5a80, roughness: 0.7 });
-    const matSkin = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.6 });
-    const matBoots = new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.3 });
+    const matSkin = new THREE.MeshStandardMaterial({ color: 0xd4a373 });
+    const matBoots = new THREE.MeshStandardMaterial({ color: 0x111113 });
     const matVisor = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
 
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.9, 8), matJacket);
@@ -468,14 +408,14 @@
     backpack.position.set(0, 0.05, -0.32);
     torso.add(backpack);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matSkin);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), matSkin);
     head.position.set(0, 0.68, 0); head.castShadow = true;
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.1, 0.15), matVisor);
     visor.position.set(0, 0.02, 0.18);
     head.add(visor);
     torso.add(head);
 
-    const flashlight = new THREE.SpotLight(0xe0f7fa, 3.5, 35, Math.PI / 6, 0.4, 1);
+    const flashlight = new THREE.SpotLight(0xe0f7fa, 3.0, 30, Math.PI / 6, 0.4, 1);
     flashlight.position.set(0, 0.2, 0.3);
     const flashTarget = new THREE.Object3D();
     flashTarget.position.set(0, 0, -15);
@@ -494,15 +434,15 @@
       return joint;
     }
 
-    const armGeoU = new THREE.CylinderGeometry(0.1, 0.09, 0.35, 8);
-    const armGeoL = new THREE.CylinderGeometry(0.08, 0.07, 0.35, 8);
+    const armGeoU = new THREE.CylinderGeometry(0.1, 0.09, 0.35, 6);
+    const armGeoL = new THREE.CylinderGeometry(0.08, 0.07, 0.35, 6);
     const leftArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
     leftArm.position.set(-0.45, 1.45, 0);
     const rightArm = createLimb(armGeoU, armGeoL, matJacket, matTacticalArmor);
     rightArm.position.set(0.45, 1.45, 0);
 
-    const legGeoU = new THREE.CylinderGeometry(0.14, 0.12, 0.4, 8);
-    const legGeoL = new THREE.CylinderGeometry(0.12, 0.1, 0.4, 8);
+    const legGeoU = new THREE.CylinderGeometry(0.14, 0.12, 0.4, 6);
+    const legGeoL = new THREE.CylinderGeometry(0.12, 0.1, 0.4, 6);
     const leftLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
     leftLeg.position.set(-0.2, 0.7, 0);
     const rightLeg = createLimb(legGeoU, legGeoL, matTacticalArmor, matBoots);
@@ -514,19 +454,12 @@
     // 变异丧尸
     const zombieGroup = new THREE.Group();
     const matZombieSkin = new THREE.MeshStandardMaterial({ color: 0x3d5a38, roughness: 0.9 });
-    const matZombieBone = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, roughness: 0.3 });
     const matZombieGlow = new THREE.MeshBasicMaterial({ color: 0xff073a });
-
-    const zTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 1.1, 8), matZombieSkin);
+    const zTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.32, 1.1, 6), matZombieSkin);
     zTorso.position.y = 1.2; zTorso.rotation.x = 0.38; zTorso.castShadow = true;
-    for (let i = -0.3; i <= 0.3; i += 0.18) {
-      const spine = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.25, 4), matZombieBone);
-      spine.position.set(0, i, -0.28); spine.rotation.x = -1.2;
-      zTorso.add(spine);
-    }
-    const zHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), matZombieSkin);
+    const zHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 10), matZombieSkin);
     zHead.position.set(0, 0.7, 0.2);
-    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), matZombieGlow);
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), matZombieGlow);
     eyeL.position.set(-0.12, 0.08, 0.28);
     const eyeR = eyeL.clone(); eyeR.position.x = 0.12;
     zHead.add(eyeL, eyeR);
@@ -540,7 +473,7 @@
     zombieGroup.add(zTorso, zLeftArm, zRightArm);
     scene.add(zombieGroup);
 
-    // ----------------- 6. 地图与 90° 平滑转弯系统 -----------------
+    // ----------------- 5. 地图与障碍系统 -----------------
     const TRACK_PIECE_LENGTH = 24;
     const TRACK_COUNT = 8;
     const tracks = [];
@@ -549,16 +482,14 @@
     const turnGlowMeshes = [];
 
     const roadTex = createRoadTexture();
-    const barrelTex = createBarrelTexture();
     const hazardTex = createHazardStripeTexture();
     const arrowLeftTex = createArrowTexture(true);
     const arrowRightTex = createArrowTexture(false);
 
     const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.85 });
-    const rustMetalMat = new THREE.MeshStandardMaterial({ color: 0x3a3330, roughness: 0.9, metalness: 0.6 });
+    const rustMetalMat = new THREE.MeshStandardMaterial({ color: 0x3a3330, roughness: 0.9 });
     const laserMat = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.85 });
-    const barrelGeo = new THREE.CylinderGeometry(0.48, 0.48, 1.25, 16);
-    const barrelMat = new THREE.MeshStandardMaterial({ map: barrelTex, roughness: 0.5, metalness: 0.3 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0xa83232, roughness: 0.5 });
 
     const turnTransition = {
       active: false,
@@ -571,12 +502,12 @@
 
     function createBarrelCluster(laneIdx, zPos) {
       const group = new THREE.Group();
-      const b1 = new THREE.Mesh(barrelGeo, barrelMat);
+      const b1 = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.25, 10), barrelMat);
       b1.position.set(0, 0.62, 0); b1.castShadow = true;
       group.add(b1);
       if (distance > 300 && Math.random() > 0.5) {
-        const b2 = new THREE.Mesh(barrelGeo, barrelMat);
-        b2.position.set(0.45, 0.62, 0.3); b2.rotation.z = 0.25; b2.castShadow = true;
+        const b2 = b1.clone();
+        b2.position.set(0.45, 0.62, 0.3); b2.rotation.z = 0.25;
         group.add(b2);
       }
       group.position.set(LANES[laneIdx], 0, zPos);
@@ -590,9 +521,9 @@
       const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5.5, 0.6), rustMetalMat);
       p1.position.set(-3.8, 2.75, 0); p1.castShadow = true;
       const p2 = p1.clone(); p2.position.x = 3.8;
-      const topBar = new THREE.Mesh(new THREE.BoxGeometry(8.2, 2.4, 0.9), new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.5 }));
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(8.2, 2.4, 0.9), new THREE.MeshStandardMaterial({ map: hazardTex }));
       topBar.position.set(0, 3.2, 0); topBar.castShadow = true;
-      const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 7.6, 8), laserMat);
+      const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 7.6, 6), laserMat);
       laser.rotation.z = Math.PI / 2; laser.position.set(0, 1.6, 0);
       group.add(p1, p2, topBar, laser);
       group.position.set(0, 0, zPos);
@@ -601,19 +532,14 @@
       obstacles.push(group);
     }
 
-    const serumTubeGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.65, 12);
+    const serumTubeGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.65, 8);
     const serumLiquidMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
-    const serumCapMat = new THREE.MeshStandardMaterial({ color: 0xdfe6e9, metalness: 0.8 });
 
     function createSerumItem(x, z) {
-      const group = new THREE.Group();
-      const liquid = new THREE.Mesh(serumTubeGeo, serumLiquidMat);
-      const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.12, 12), serumCapMat);
-      capTop.position.y = 0.33;
-      group.add(liquid, capTop);
-      group.position.set(x, 0.8, z);
-      scene.add(group);
-      serums.push(group);
+      const serum = new THREE.Mesh(serumTubeGeo, serumLiquidMat);
+      serum.position.set(x, 0.8, z);
+      scene.add(serum);
+      serums.push(serum);
     }
 
     function createTrackPiece(zPos, forceTurn = false) {
@@ -623,37 +549,28 @@
 
       if (isTurn) {
         const mainRoad = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
-        mainRoad.position.set(0, -0.2, 0);
-        group.add(mainRoad);
+        mainRoad.position.set(0, -0.2, 0); group.add(mainRoad);
 
         const cross = new THREE.Mesh(new THREE.BoxGeometry(26, 0.4, 8), roadMat);
-        cross.position.set(turnDir * 9, -0.2, 0); cross.receiveShadow = true;
-        group.add(cross);
+        cross.position.set(turnDir * 9, -0.2, 0); group.add(cross);
 
         const arrowPlaneMat = new THREE.MeshBasicMaterial({
           map: turnDir === -1 ? arrowLeftTex : arrowRightTex,
-          transparent: true,
-          opacity: 0.95
+          transparent: true, opacity: 0.95
         });
         const arrowPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 7.2), arrowPlaneMat);
-        arrowPlane.rotation.x = -Math.PI / 2;
-        arrowPlane.position.set(0, 0.04, 0);
+        arrowPlane.rotation.x = -Math.PI / 2; arrowPlane.position.set(0, 0.04, 0);
         group.add(arrowPlane);
         turnGlowMeshes.push(arrowPlane);
 
         const signPost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 0.4), rustMetalMat);
         signPost.position.set(-turnDir * 4.2, 3.5, 0);
-        
         const signBoard = new THREE.Mesh(
           new THREE.BoxGeometry(4.5, 2.5, 0.4),
           new THREE.MeshBasicMaterial({ map: turnDir === -1 ? arrowLeftTex : arrowRightTex })
         );
         signBoard.position.set(-turnDir * 2.2, 6.0, 0);
         group.add(signPost, signBoard);
-
-        const turnLight = new THREE.PointLight(0xff0044, 2.5, 25);
-        turnLight.position.set(0, 3, 0);
-        group.add(turnLight);
       } else {
         const road = new THREE.Mesh(new THREE.BoxGeometry(8, 0.4, TRACK_PIECE_LENGTH), roadMat);
         road.position.set(0, -0.2, 0); road.receiveShadow = true;
@@ -697,30 +614,75 @@
 
     for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
 
-    // ----------------- 7. 交互逻辑 -----------------
+    // ----------------- 6. 移动端触摸手势与键盘双重绑定 -----------------
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      initAudio();
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+      touchStartTime = Date.now();
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      e.preventDefault(); // 彻底阻止手机浏览器默认滚动
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (isFalling || isGameOver || turnTransition.active) return;
+      const deltaX = e.changedTouches[0].screenX - touchStartX;
+      const deltaY = e.changedTouches[0].screenY - touchStartY;
+      const deltaTime = Date.now() - touchStartTime;
+
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      // 快速滑动判定 (最小有效滑动阈值 25px)
+      if (Math.max(absX, absY) > 25 && deltaTime < 400) {
+        if (absX > absY) {
+          // 水平滑动：左滑 / 右滑
+          if (deltaX < 0) handleInput('left');
+          else handleInput('right');
+        } else {
+          // 垂直滑动：上滑跳跃 / 下滑滑行
+          if (deltaY < 0) handleInput('up');
+          else handleInput('down');
+        }
+      }
+    }, { passive: false });
+
     window.addEventListener('keydown', (e) => {
       initAudio();
       if (isFalling || isGameOver || turnTransition.active) return;
       const key = e.key.toLowerCase();
+      if (key === 'arrowleft' || key === 'a') handleInput('left');
+      else if (key === 'arrowright' || key === 'd') handleInput('right');
+      else if (key === 'arrowup' || key === 'w' || key === ' ') handleInput('up');
+      else if (key === 'arrowdown' || key === 's') handleInput('down');
+    });
 
+    // 统一输入调度器
+    function handleInput(action) {
       const nearTurnTrack = tracks.find(t => t.userData.isTurnTrack && Math.abs(t.position.z) < 6.0 && !t.userData.handled);
 
-      if (key === 'arrowleft' || key === 'a') {
+      if (action === 'left') {
         if (nearTurnTrack) {
           if (nearTurnTrack.userData.turnDir === -1) startSmoothTurn(nearTurnTrack, -1);
           else triggerTurnFail("反向转弯！坠入深渊！");
         } else if (currentLane > 0) currentLane--;
-      } else if (key === 'arrowright' || key === 'd') {
+      } else if (action === 'right') {
         if (nearTurnTrack) {
           if (nearTurnTrack.userData.turnDir === 1) startSmoothTurn(nearTurnTrack, 1);
           else triggerTurnFail("反向转弯！坠入深渊！");
         } else if (currentLane < 2) currentLane++;
-      } else if ((key === 'arrowup' || key === 'w' || key === ' ') && !isJumping && !isSliding) {
+      } else if (action === 'up' && !isJumping && !isSliding) {
         isJumping = true; jumpVelocity = 0.34; playSfx('jump');
-      } else if ((key === 'arrowdown' || key === 's') && !isSliding) {
+      } else if (action === 'down' && !isSliding) {
         isJumping = false; playerGroup.position.y = 0; isSliding = true; slideTimer = 42; playSfx('slide');
       }
-    });
+    }
 
     function startSmoothTurn(track, dir) {
       track.userData.handled = true;
@@ -748,7 +710,6 @@
       distanceSinceLastTurn = 0;
 
       sparkMat.opacity = 0;
-
       for (let i = 0; i < TRACK_COUNT; i++) createTrackPiece(-i * TRACK_PIECE_LENGTH, false);
     }
 
@@ -759,7 +720,7 @@
       triggerGameOver(reason);
     }
 
-    // ----------------- 8. 游戏渲染主循环 -----------------
+    // ----------------- 7. 渲染主循环 -----------------
     let serumCount = 0;
     let isGameOver = false;
     let distanceSinceLastTurn = 0;
@@ -800,7 +761,6 @@
 
         const camOrbitRadius = 7.6;
         const camAngle = -dir * (Math.PI / 2) * ease;
-        
         camera.position.x = playerGroup.position.x - Math.sin(camAngle) * camOrbitRadius * 0.4;
         camera.position.y = 4.8 + Math.sin(t * Math.PI) * 0.3;
         camera.position.z = playerGroup.position.z + Math.cos(camAngle) * camOrbitRadius;
@@ -883,13 +843,7 @@
 
       if (upcomingTurn && upcomingTurn.position.z < 0 && upcomingTurn.position.z > -28) {
         alertElem.style.display = 'block';
-        if (upcomingTurn.userData.turnDir === -1) {
-          alertElem.innerText = '◀ 准备向左拐弯 [按 A]';
-          alertElem.style.borderColor = '#00f5d4';
-        } else {
-          alertElem.innerText = '准备向右拐弯 [按 D] ▶';
-          alertElem.style.borderColor = '#ff0055';
-        }
+        alertElem.innerText = upcomingTurn.userData.turnDir === -1 ? '◀ 准备向左滑过弯' : '准备向右滑过弯 ▶';
       } else {
         alertElem.style.display = 'none';
       }
@@ -939,7 +893,7 @@
         } else if (obs.userData.type === 'high_obs') {
           if (Math.abs(obs.position.z - playerPos.z) < 1.2 && !isSliding) {
             playSfx('hit');
-            triggerGameOver("触碰高压激光切断！请按下键 (S) 铲地钻过");
+            triggerGameOver("触碰高压激光切断！请下滑钻过");
             return;
           }
         }
@@ -964,13 +918,13 @@
       document.getElementById('gameover').style.display = 'block';
     }
 
+    // 屏幕尺寸自适应（支持手机横竖屏旋转）
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 页面加载完成后自动拉取最新排行榜
     fetchCloudLeaderboard();
     animate();
   </script>
